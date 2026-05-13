@@ -73,14 +73,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <HeroSection
-        isLive={liveStatus.isLive}
-        serviceSchedule={[
-          { day: "Domingo", time: "9:00 AM", label: "Servicio principal" },
-          { day: "Domingo", time: "11:30 AM", label: "Segundo servicio" },
-          { day: "Miércoles", time: "7:00 PM", label: "Estudio bíblico" },
-        ]}
-      />
+      <HeroSection isLive={liveStatus.isLive} />
 
       <WelcomeSection
         overline="Nuestro pastor"
