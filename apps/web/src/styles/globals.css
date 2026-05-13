@@ -1,0 +1,361 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* ─── Leaflet dark-theme overrides ──────────────────────────────────────────── */
+.leaflet-container {
+  background: #111111;
+  font-family: inherit;
+}
+.leaflet-control-attribution {
+  background: rgba(0,0,0,0.7) !important;
+  color: #555 !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: #888 !important; }
+.leaflet-control-zoom a {
+  background: #1a1a1a !important;
+  color: #f8f8f8 !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+.leaflet-control-zoom a:hover { background: #252525 !important; }
+.leaflet-popup-content-wrapper {
+  background: #1a1a1a !important;
+  color: #f8f8f8 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+.leaflet-popup-tip { background: #1a1a1a !important; }
+.leaflet-tooltip {
+  background: #1a1a1a !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #f8f8f8 !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+}
+.leaflet-tooltip-top:before { border-top-color: rgba(255,255,255,0.08) !important; }
+
+/* ─── Design Tokens (Tailwind v4 @theme) ────────────────────────────────────
+   Cada variable aquí genera utilidades automáticas:
+   --color-gold → bg-gold, text-gold, border-gold, ring-gold
+   --font-display → font-display
+   --spacing-section → p-section, etc.
+──────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Fondos */
+  --color-bg-base:    #000000;
+  --color-bg-surface: #111111;
+  --color-bg-raised:  #1a1a1a;
+
+  /* Dorado — el acento central */
+  --color-gold:       #ffcc4d;
+  --color-gold-muted: #c6a867;
+  --color-gold-deep:  #7a594c;
+
+  /* Texto */
+  --color-text-primary:   #f8f8f8;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted:     #555555;
+
+  /* Bordes */
+  --color-border:      rgba(255, 255, 255, 0.08);
+  --color-border-gold: rgba(255, 204, 77, 0.3);
+
+  /* Acentos por ministerio */
+  --color-ministry-hombres:        #1e3a5f;
+  --color-ministry-mujeres:        #c8956c;
+  --color-ministry-kids:           #ffb347;
+  --color-ministry-prejuvenil:     #2d6a4f;
+  --color-ministry-jovenes:        #4a1942;
+  --color-ministry-jovenes-adultos: #1b4d5a;
+  --color-ministry-bendecidos:     #3d4f2e;
+  --color-ministry-metanoia:       #1a2744;
+
+  /* Fuentes */
+  --font-display: var(--font-outfit), "Outfit", sans-serif;
+  --font-label:   var(--font-outfit), "Outfit", sans-serif;
+  --font-body:    var(--font-outfit), "Outfit", sans-serif;
+
+  /* Curvas de animación */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    line-height: 1.65;
+    min-height: 100svh;
+  }
+
+  /* Selección de texto */
+  ::selection {
+    background-color: var(--color-gold);
+    color: #000;
+  }
+
+  /* Focus ring consistente */
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Reset botones y links */
+  button { cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+
+  img, video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* Scrollbar sutil (webkit) */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg-base); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-bg-raised);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+}
+
+/* ─── Tipografía ─────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Display — hero titles */
+  .text-display {
+    font-family: var(--font-display);
+    font-size: clamp(3.25rem, 8vw, 7rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+  }
+
+  /* H1 — section heroes */
+  .text-h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+
+  /* H2 — section headings */
+  .text-h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  /* H3 — card titles */
+  .text-h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* Label — Outfit semibold uppercase, para fechas/categorías/metadata */
+  .text-label {
+    font-family: var(--font-label);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Label grande */
+  .text-label-lg {
+    font-family: var(--font-label);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* Lead — primer párrafo */
+  .text-lead {
+    font-family: var(--font-body);
+    font-size: clamp(1.0625rem, 2vw, 1.25rem);
+    font-weight: 400;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Contenedor principal */
+  .container-main {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 5vw, 5rem);
+  }
+
+  /* Contenedor estrecho — para texto largo/storytelling */
+  .container-narrow {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 5vw, 3rem);
+  }
+
+  /* Padding de sección */
+  .section-py {
+    padding-block: clamp(4.5rem, 9vw, 9rem);
+  }
+
+  .section-py-sm {
+    padding-block: clamp(3rem, 6vw, 5.5rem);
+  }
+}
+
+/* ─── Overlays de imágenes ───────────────────────────────────────────────── */
+@layer utilities {
+  /* Hero — de negro sólido en bottom a transparente en top */
+  .overlay-hero {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 1)    0%,
+      rgba(0, 0, 0, 0.7)  30%,
+      rgba(0, 0, 0, 0.3)  65%,
+      rgba(0, 0, 0, 0.05) 100%
+    );
+  }
+
+  /* Card — overlay para cards con texto encima */
+  .overlay-card {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.92) 0%,
+      rgba(0, 0, 0, 0.5)  50%,
+      rgba(0, 0, 0, 0)    100%
+    );
+  }
+
+  /* Dark — overlay genérico oscuro */
+  .overlay-dark {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ─── Efectos decorativos ────────────────────────────────────────────────── */
+@layer utilities {
+  /* Línea dorada antes del heading — uso: className="gold-line" */
+  .gold-line::before {
+    content: "";
+    display: block;
+    width: 2.25rem;
+    height: 2px;
+    background-color: var(--color-gold);
+    margin-bottom: 0.875rem;
+  }
+
+  /* Gold line centrada */
+  .gold-line-center::before {
+    content: "";
+    display: block;
+    width: 2.25rem;
+    height: 2px;
+    background-color: var(--color-gold);
+    margin-inline: auto;
+    margin-bottom: 0.875rem;
+  }
+
+  /* Borde izquierdo dorado — cell group cards */
+  .border-l-gold {
+    border-left: 2px solid var(--color-gold);
+    padding-left: 1.25rem;
+  }
+
+  /* Glow sutil dorado — para CTAs hover */
+  .gold-glow {
+    box-shadow: 0 0 20px rgba(255, 204, 77, 0.15);
+  }
+
+  /* Grain cinematográfico sobre imágenes */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: inherit;
+  }
+}
+
+/* ─── Glass morphism ─────────────────────────────────────────────────────── */
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-header {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* ─── Animaciones globales ───────────────────────────────────────────────── */
+@layer utilities {
+  /* Dot pulsante — indicador LIVE */
+  .animate-pulse-dot {
+    animation: pulse-dot 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+
+  /* Scroll cue — línea animada viajando hacia abajo */
+  .animate-scroll-cue {
+    animation: scroll-cue 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes scroll-cue {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(300%); }
+  }
+
+  /* Shimmer — loading skeleton */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-surface) 25%,
+      var(--color-bg-raised) 50%,
+      var(--color-bg-surface) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}

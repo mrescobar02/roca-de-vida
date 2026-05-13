@@ -1,0 +1,47 @@
+# Internal planning docs
+PLAN.md
+DESIGN.md
+ARCHITECTURE.MD
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+dist
+build
+out
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Payload
+apps/cms/src/payload-types.ts
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Turbo
+.turbo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Media (local uploads)
+apps/cms/uploads
