@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
-    "build": "next build",
+    "build": "payload migrate && next build",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
     "start": "next start --port 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -12,23 +14,24 @@
     "generate:importmap": "payload generate:importmap"
   },
   "dependencies": {
-    "payload": "^3.33.0",
-    "@payloadcms/next": "^3.33.0",
     "@payloadcms/db-postgres": "^3.33.0",
+    "@payloadcms/next": "^3.33.0",
     "@payloadcms/richtext-lexical": "^3.33.0",
     "@payloadcms/storage-uploadthing": "^3.33.0",
+    "graphql": "^16.11.0",
     "next": "~15.4.11",
+    "payload": "^3.33.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "graphql": "^16.11.0",
     "sharp": "^0.34.2"
   },
   "devDependencies": {
+    "@types/node": "^22.15.17",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.2",
-    "@types/node": "^22.15.17",
-    "typescript": "^5.8.3",
     "eslint": "^9.27.0",
-    "eslint-config-next": "^15.3.2"
+    "eslint-config-next": "^15.3.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.3"
   }
 }
