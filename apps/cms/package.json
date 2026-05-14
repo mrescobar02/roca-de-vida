@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
-    "build": "payload migrate && next build",
+    "build": "next build",
     "migrate": "payload migrate",
     "migrate:create": "payload migrate:create",
     "start": "next start --port 3001",
