@@ -25,6 +25,7 @@ export function Header({ ministries = [] }: HeaderProps) {
       : item
   );
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeMobileNav = React.useCallback(() => setIsMobileOpen(false), []);
 
   // Detectar scroll — también chequea posición inicial para back-navigation
   React.useEffect(() => {
@@ -127,7 +128,7 @@ export function Header({ ministries = [] }: HeaderProps) {
       {/* Mobile Nav */}
       <MobileNav
         isOpen={isMobileOpen}
-        onClose={() => setIsMobileOpen(false)}
+        onClose={closeMobileNav}
         navItems={navItems}
       />
     </>
