@@ -5,7 +5,35 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "DATABASE_URI",
+        "PAYLOAD_SECRET",
+        "PAYLOAD_URL",
+        "NEXT_PUBLIC_SITE_URL",
+        "NEXT_PUBLIC_CMS_URL",
+        "REVALIDATE_SECRET"
+      ],
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "DATABASE_URL_UNPOOLED",
+        "DATABASE_POSTGRES_URL",
+        "DATABASE_POSTGRES_URL_NON_POOLING",
+        "DATABASE_PGHOST",
+        "DATABASE_PGHOST_UNPOOLED",
+        "DATABASE_PGUSER",
+        "DATABASE_PGPASSWORD",
+        "DATABASE_PGDATABASE",
+        "DATABASE_POSTGRES_HOST",
+        "DATABASE_POSTGRES_USER",
+        "DATABASE_POSTGRES_PASSWORD",
+        "DATABASE_POSTGRES_DATABASE",
+        "DATABASE_POSTGRES_PRISMA_URL",
+        "DATABASE_POSTGRES_URL_NO_SSL",
+        "DATABASE_NEON_PROJECT_ID",
+        "DATABASE_NEON_AUTH_BASE_URL",
+        "DATABASE_VITE_NEON_AUTH_URL"
+      ]
     },
     "dev": {
       "cache": false,
