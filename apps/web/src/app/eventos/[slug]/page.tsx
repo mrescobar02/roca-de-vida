@@ -8,39 +8,54 @@ import { AnimateIn } from "@/components/common/AnimateIn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@rdv/utils";
-import { EVENTS } from "@/lib/mock/events";
+import {
+  getEventBySlug,
+  getUpcomingEvents,
+  getPastEvents,
+  richTextToPlain,
+} from "@/lib/payload/client";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return EVENTS.map((e) => ({ slug: e.slug }));
+export async function generateStaticParams() {
+  const [upcoming, past] = await Promise.all([
+    getUpcomingEvents(100),
+    getPastEvents(100),
+  ]);
+  return [...upcoming.docs, ...past.docs].map((e) => ({ slug: e.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const event = EVENTS.find((e) => e.slug === slug);
+  const result = await getEventBySlug(slug);
+  const event = result.docs[0];
   if (!event) return {};
   return {
     title: `${event.title} | Roca de Vida Panamá`,
-    description: event.description,
-    openGraph: { images: [{ url: event.banner.url }] },
+    description: richTextToPlain(event.description).slice(0, 160),
+    openGraph: event.banner ? { images: [{ url: event.banner.url }] } : {},
   };
 }
 
+export const revalidate = 60;
+
 export default async function EventPage({ params }: PageProps) {
   const { slug } = await params;
-  const event = EVENTS.find((e) => e.slug === slug);
+  const result = await getEventBySlug(slug);
+  const event = result.docs[0];
   if (!event) notFound();
 
-  // Schema.org Event
+  const description = richTextToPlain(event.description);
+  const isPast = new Date(event.date) < new Date();
+
   const eventSchema = {
     "@context": "https://schema.org",
     "@type": "Event",
     name: event.title,
     startDate: event.time ? `${event.date}T${to24h(event.time)}-05:00` : event.date,
     ...(event.endDate ? { endDate: event.endDate } : {}),
-    description: event.description,
-    image: event.banner.url,
+    description,
+    image: event.banner?.url,
     location: {
       "@type": "Place",
       name: event.location ?? "Roca de Vida Panamá",
@@ -71,20 +86,22 @@ export default async function EventPage({ params }: PageProps) {
       </section>
 
       {/* Banner hero */}
-      <section className="relative bg-bg-base">
-        <div className="relative aspect-[21/9] max-h-[480px] overflow-hidden">
-          <Image
-            src={event.banner.url}
-            alt={event.banner.alt}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-          />
-          <div className="absolute inset-0 overlay-hero" aria-hidden />
-          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-bg-base to-transparent" aria-hidden />
-        </div>
-      </section>
+      {event.banner && (
+        <section className="relative bg-bg-base">
+          <div className="relative aspect-[21/9] max-h-[480px] overflow-hidden">
+            <Image
+              src={event.banner.url}
+              alt={event.banner.alt ?? event.title}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+            <div className="absolute inset-0 overlay-hero" aria-hidden />
+            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-bg-base to-transparent" aria-hidden />
+          </div>
+        </section>
+      )}
 
       {/* Contenido */}
       <section className="bg-bg-base">
@@ -95,17 +112,19 @@ export default async function EventPage({ params }: PageProps) {
             {event.ministry && (
               <Badge variant="gold" className="self-start">{event.ministry.name}</Badge>
             )}
-            {event.isPast && (
+            {isPast && (
               <Badge variant="outline" className="self-start text-text-muted">Evento pasado</Badge>
             )}
 
             <h1 className="text-h1 text-text-primary leading-tight">{event.title}</h1>
 
-            <p className="font-body text-[1rem] text-text-secondary leading-relaxed">
-              {event.description}
-            </p>
+            {description && (
+              <p className="font-body text-[1rem] text-text-secondary leading-relaxed">
+                {description}
+              </p>
+            )}
 
-            {event.registrationUrl && !event.isPast && (
+            {event.registrationUrl && !isPast && (
               <Button variant="primary" size="lg" asChild className="self-start">
                 <Link href={event.registrationUrl}>
                   Registrarme <span aria-hidden className="ml-1">→</span>

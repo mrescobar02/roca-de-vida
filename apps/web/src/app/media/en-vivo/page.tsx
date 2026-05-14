@@ -7,8 +7,8 @@ import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/
 import { Badge } from "@/components/ui/badge";
 import { SermonCard } from "@/components/cards";
 import { YoutubeEmbed } from "@/components/media/YoutubeEmbed";
-import { SERMONS } from "@/lib/mock/sermons";
 import { getIsLive, getLatestSermons, toSermonProps } from "@/lib/youtube/api";
+import { getSermons, type CmsSermon } from "@/lib/payload/client";
 
 export const revalidate = 60;
 
@@ -21,16 +21,17 @@ const NEXT_BROADCAST_LABEL = "Domingo · 9:00 AM (Panamá)";
 const PRE_STREAM_MESSAGE = "El servicio comenzará en breve. Prepárate para adorar con nosotros.";
 
 export default async function EnVivoPage() {
-  const [liveStatus, ytVideos] = await Promise.all([
+  const [liveStatus, ytVideos, cmsResult] = await Promise.all([
     getIsLive(),
     getLatestSermons(3),
+    getSermons({ limit: 3 }),
   ]);
 
   const recent = ytVideos.length > 0
     ? ytVideos.map(toSermonProps)
-    : SERMONS.slice(0, 3).map((s) => ({
+    : cmsResult.docs.map((s: CmsSermon) => ({
         title: s.title, slug: s.slug, youtubeUrl: s.youtubeUrl,
-        pastor: { name: s.pastor.name }, date: s.date, duration: s.duration,
+        pastor: { name: s.pastor?.name ?? "Roca de Vida" }, date: s.date, duration: s.duration,
       }));
 
   const streamUrl = liveStatus.videoId

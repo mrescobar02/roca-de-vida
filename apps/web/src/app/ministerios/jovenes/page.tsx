@@ -6,50 +6,52 @@ import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { EventCard } from "@/components/cards";
-import { MINISTRIES_DATA } from "@/lib/mock/ministries";
-import { UPCOMING_EVENTS } from "@/lib/mock/events";
+import { getMinistries, getUpcomingEvents } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Jóvenes | Roca de Vida Panamá",
   description: "Ministerio de Jóvenes de Roca de Vida Panamá — espacios para cada etapa: Prejuvenil, Jóvenes y Jóvenes Adultos.",
 };
 
-const YOUTH_SLUGS = ["prejuvenil", "jovenes-teens", "jovenes-adultos"];
+export const revalidate = 300;
 
-const CATEGORIES = [
-  {
-    slug: "prejuvenil",
-    name: "Prejuvenil",
-    ageRange: "10 — 14 años",
-    description: "Acompañamos a los preadolescentes en la etapa más crítica de su formación, conectándolos con Dios y entre sí antes de entrar a la adolescencia.",
-    heroImage: MINISTRIES_DATA.prejuvenil.heroImage,
-    accent: "#2d6a4f",
-    schedule: MINISTRIES_DATA.prejuvenil.schedule,
-  },
-  {
-    slug: "jovenes-teens",
-    name: "Jóvenes",
-    ageRange: "15 — 20 años",
-    description: "Conectamos a los jóvenes con Dios, con comunidad genuina y con su propósito. Una generación que no se avergüenza del evangelio.",
-    heroImage: MINISTRIES_DATA["jovenes-teens"].heroImage,
-    accent: "#4a1942",
-    schedule: MINISTRIES_DATA["jovenes-teens"].schedule,
-  },
-  {
-    slug: "jovenes-adultos",
-    name: "Jóvenes Adultos",
-    ageRange: "21 — 29 años",
-    description: "Acompañamos a jóvenes adultos en los años más decisivos: vocación, relaciones, fe y propósito. Arraigados en la Palabra.",
-    heroImage: MINISTRIES_DATA["jovenes-adultos"].heroImage,
-    accent: "#1b4d5a",
-    schedule: MINISTRIES_DATA["jovenes-adultos"].schedule,
-  },
-];
+const YOUTH_SLUGS = ["prejuvenil", "jovenes", "jovenes-adultos"];
 
-export default function JovenesHubPage() {
-  const youthEvents = UPCOMING_EVENTS.filter(
-    (e) => e.ministry?.slug && YOUTH_SLUGS.includes(e.ministry.slug)
-  ).slice(0, 3);
+const CATEGORY_META = {
+  prejuvenil: { ageRange: "10 — 14 años", accent: "#2d6a4f", description: "Acompañamos a los preadolescentes en la etapa más crítica de su formación, conectándolos con Dios y entre sí antes de entrar a la adolescencia." },
+  jovenes: { ageRange: "15 — 20 años", accent: "#4a1942", description: "Conectamos a los jóvenes con Dios, con comunidad genuina y con su propósito. Una generación que no se avergüenza del evangelio." },
+  "jovenes-adultos": { ageRange: "21 — 29 años", accent: "#1b4d5a", description: "Acompañamos a jóvenes adultos en los años más decisivos: vocación, relaciones, fe y propósito. Arraigados en la Palabra." },
+};
+
+export default async function JovenesHubPage() {
+  const [ministriesResult, eventsResult] = await Promise.all([
+    getMinistries(),
+    getUpcomingEvents(20),
+  ]);
+
+  const ministryMap = Object.fromEntries(
+    ministriesResult.docs.map((m) => [m.slug, m])
+  );
+
+  const categories = YOUTH_SLUGS.map((slug) => {
+    const cms = ministryMap[slug];
+    const meta = CATEGORY_META[slug as keyof typeof CATEGORY_META];
+    return {
+      slug,
+      name: cms?.name ?? slug,
+      ageRange: meta.ageRange,
+      description: meta.description,
+      heroImage: cms?.heroImage
+        ? { url: cms.heroImage.url, alt: cms.heroImage.alt ?? cms.name }
+        : null,
+      accent: meta.accent,
+      schedule: cms?.schedule,
+    };
+  });
+
+  const youthEvents = eventsResult.docs
+    .filter((e) => e.ministry?.slug && YOUTH_SLUGS.includes(e.ministry.slug))
+    .slice(0, 3);
 
   return (
     <>
@@ -95,38 +97,35 @@ export default function JovenesHubPage() {
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
             staggerDelay={0.12}
           >
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <AnimateInItem key={cat.slug}>
                 <Link
                   href={`/ministerios/${cat.slug}`}
                   className="group relative block h-[440px] overflow-hidden rounded-2xl bg-bg-raised focus-visible:outline-2 focus-visible:outline-gold focus-visible:outline-offset-2"
                   aria-label={`${cat.name} — ${cat.ageRange}`}
                 >
-                  {/* Imagen */}
-                  <Image
-                    src={cat.heroImage.url}
-                    alt={cat.heroImage.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.05]"
-                  />
+                  {cat.heroImage && (
+                    <Image
+                      src={cat.heroImage.url}
+                      alt={cat.heroImage.alt}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.05]"
+                    />
+                  )}
 
-                  {/* Overlay */}
                   <div
                     className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/10"
                     aria-hidden
                   />
 
-                  {/* Borde de acento en hover */}
                   <div
                     className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     style={{ boxShadow: `inset 0 0 0 2px ${cat.accent}` }}
                     aria-hidden
                   />
 
-                  {/* Contenido */}
                   <div className="absolute inset-x-0 bottom-0 p-6 flex flex-col gap-2.5">
-                    {/* Rango de edad */}
                     <span
                       className="inline-flex items-center text-label text-[0.6875rem] px-3 py-1 rounded-full border w-fit tracking-[0.12em]"
                       style={{
@@ -192,8 +191,11 @@ export default function JovenesHubPage() {
                     date={event.date}
                     time={event.time}
                     location={event.location}
-                    banner={event.banner}
-                    ministry={event.ministry}
+                    banner={{
+                      url: event.banner?.url ?? "",
+                      alt: event.banner?.alt ?? event.title,
+                    }}
+                    ministry={event.ministry ? { name: event.ministry.name, slug: event.ministry.slug } : undefined}
                   />
                 </AnimateInItem>
               ))}

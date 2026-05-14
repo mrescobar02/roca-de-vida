@@ -7,34 +7,52 @@ import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn } from "@/components/common/AnimateIn";
 import { Badge } from "@/components/ui/badge";
 import { JoinGroupForm } from "@/components/groups/JoinGroupForm";
-import { CELL_GROUPS } from "@/lib/mock/groups";
+import { getCellGroups, getCellGroupBySlug, richTextToPlain } from "@/lib/payload/client";
+
+const DISTRICT_LABELS: Record<string, string> = {
+  "ciudad-panama": "Ciudad de Panamá",
+  "san-miguelito": "San Miguelito",
+  "panama-oeste": "Panamá Oeste",
+  chorrera: "La Chorrera",
+  otro: "Otro",
+};
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  // TODO: Replace with async fetch to Payload CMS
-  return CELL_GROUPS.map((g) => ({ slug: g.slug }));
+export async function generateStaticParams() {
+  const result = await getCellGroups();
+  return result.docs.map((g) => ({ slug: g.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const group = CELL_GROUPS.find((g) => g.slug === slug);
+  const result = await getCellGroupBySlug(slug);
+  const group = result.docs[0];
   if (!group) return {};
   return {
     title: `${group.name} | Grupos Celulares — Roca de Vida Panamá`,
-    description: group.bio,
+    description: richTextToPlain(group.description).slice(0, 160),
   };
 }
 
+export const revalidate = 300;
+
 export default async function GroupPage({ params }: PageProps) {
   const { slug } = await params;
-  const group = CELL_GROUPS.find((g) => g.slug === slug);
+  const result = await getCellGroupBySlug(slug);
+  const group = result.docs[0];
   if (!group) notFound();
 
-  const spotsLeft = group.capacity - group.enrolled;
-  const almostFull = !group.isFull && spotsLeft > 0 && spotsLeft <= 3;
+  const bio = richTextToPlain(group.description);
+  const districtLabel = DISTRICT_LABELS[group.district] ?? group.district;
+  const leaderName = group.leader?.name ?? "";
+  const leaderTitle = group.leader?.title;
+  const capacity = group.capacity ?? 0;
+  const isFull = group.isFull ?? false;
+  const spotsLeft = capacity;
+  const almostFull = !isFull && spotsLeft > 0 && spotsLeft <= 3;
 
   return (
     <>
@@ -61,15 +79,14 @@ export default async function GroupPage({ params }: PageProps) {
 
             <div className="flex flex-wrap items-start gap-4">
               <div className="flex flex-col gap-2">
-                <p className="text-label text-gold">{group.district}</p>
+                <p className="text-label text-gold">{districtLabel}</p>
                 <h1 className="text-display text-text-primary leading-none">
                   {group.name}
                 </h1>
               </div>
 
-              {/* Status badge */}
               <div className="mt-2">
-                {group.isFull ? (
+                {isFull ? (
                   <Badge variant="outline" className="text-text-muted border-border">Lleno</Badge>
                 ) : almostFull ? (
                   <Badge variant="gold">Últimos cupos</Badge>
@@ -91,23 +108,26 @@ export default async function GroupPage({ params }: PageProps) {
 
           {/* Detalles */}
           <AnimateIn variant="fadeRight" className="flex flex-col gap-8">
-            <p className="font-body text-[1rem] text-text-secondary leading-relaxed">
-              {group.bio}
-            </p>
+            {bio && (
+              <p className="font-body text-[1rem] text-text-secondary leading-relaxed">
+                {bio}
+              </p>
+            )}
 
-            {/* Info cards */}
             <div className="grid sm:grid-cols-2 gap-4">
               {[
                 { icon: MapPin, label: "Ubicación", value: group.address ?? group.neighborhood },
                 { icon: Clock, label: "Horario", value: group.schedule },
-                { icon: User, label: "Líder", value: `${group.leaderName}${group.leaderTitle ? ` — ${group.leaderTitle}` : ""}` },
-                {
-                  icon: Users,
-                  label: "Capacidad",
-                  value: group.isFull
-                    ? `${group.capacity}/${group.capacity} — Lleno`
-                    : `${group.enrolled}/${group.capacity} personas`,
-                },
+                { icon: User, label: "Líder", value: `${leaderName}${leaderTitle ? ` — ${leaderTitle}` : ""}` },
+                ...(capacity > 0
+                  ? [{
+                      icon: Users,
+                      label: "Capacidad",
+                      value: isFull
+                        ? `${capacity}/${capacity} — Lleno`
+                        : `${capacity} personas`,
+                    }]
+                  : []),
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
@@ -139,7 +159,7 @@ export default async function GroupPage({ params }: PageProps) {
                     <MapPin size={12} strokeWidth={2} className="text-bg-base" />
                   </div>
                   <span className="text-label text-text-secondary text-[0.6875rem] bg-bg-surface/90 px-2 py-1 rounded-sm">
-                    {group.neighborhood}, {group.district}
+                    {group.neighborhood}, {districtLabel}
                   </span>
                 </div>
               </div>
@@ -149,7 +169,7 @@ export default async function GroupPage({ params }: PageProps) {
           {/* Sidebar — formulario */}
           <AnimateIn variant="fadeLeft" delay={0.1}>
             <div className="sticky top-24">
-              {group.isFull ? (
+              {isFull ? (
                 <div className="flex flex-col gap-4 p-6 bg-bg-raised border border-border rounded-2xl">
                   <h3 className="font-display font-700 text-text-primary text-[1.0625rem]">
                     Este grupo está lleno
@@ -171,7 +191,7 @@ export default async function GroupPage({ params }: PageProps) {
                       Quiero unirme
                     </h3>
                     <p className="font-body text-[0.8125rem] text-text-secondary">
-                      Completa el formulario y {group.leaderName} te contactará.
+                      Completa el formulario y {leaderName || "el líder"} te contactará.
                     </p>
                   </div>
                   <JoinGroupForm groupName={group.name} groupSlug={group.slug} />

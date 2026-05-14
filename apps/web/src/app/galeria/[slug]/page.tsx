@@ -7,33 +7,44 @@ import { Container } from "@/components/common/Container";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@rdv/utils";
-import { GALLERIES } from "@/lib/mock/gallery";
+import { getGalleries, getGalleryBySlug } from "@/lib/payload/client";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return GALLERIES.map((g) => ({ slug: g.slug }));
+export async function generateStaticParams() {
+  const result = await getGalleries();
+  return result.docs.map((g) => ({ slug: g.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const gallery = GALLERIES.find((g) => g.slug === slug);
+  const result = await getGalleryBySlug(slug);
+  const gallery = result.docs[0];
   if (!gallery) return {};
   return {
     title: `${gallery.title} | Galería — Roca de Vida Panamá`,
-    openGraph: { images: [{ url: gallery.coverImage.url }] },
+    openGraph: gallery.coverImage ? { images: [{ url: gallery.coverImage.url }] } : {},
   };
 }
 
+export const revalidate = 300;
+
 export default async function GalleryPage({ params }: PageProps) {
   const { slug } = await params;
-  const gallery = GALLERIES.find((g) => g.slug === slug);
+  const result = await getGalleryBySlug(slug);
+  const gallery = result.docs[0];
   if (!gallery) notFound();
 
-  // Completar hasta 12 fotos usando la cover si no hay suficientes
-  const photos = gallery.photos.length >= 6
-    ? gallery.photos
-    : Array.from({ length: 12 }, (_, i) => gallery.photos[i % gallery.photos.length] ?? gallery.coverImage);
+  const rawPhotos = gallery.photos ?? [];
+  const coverImage = gallery.coverImage;
+  const totalCount = gallery.photoCount ?? rawPhotos.length;
+
+  const photos =
+    rawPhotos.length >= 6
+      ? rawPhotos
+      : Array.from({ length: 12 }, (_, i) =>
+          rawPhotos[i % rawPhotos.length] ?? coverImage
+        ).filter(Boolean);
 
   return (
     <>
@@ -63,7 +74,7 @@ export default async function GalleryPage({ params }: PageProps) {
                 </time>
                 <div className="flex items-center gap-1.5 text-text-muted">
                   <Camera size={13} strokeWidth={1.5} aria-hidden />
-                  <span className="font-body text-[0.875rem]">{gallery.photoCount} fotos</span>
+                  <span className="font-body text-[0.875rem]">{totalCount} fotos</span>
                 </div>
               </div>
             </div>
@@ -82,8 +93,8 @@ export default async function GalleryPage({ params }: PageProps) {
               <AnimateInItem key={i} variant="scaleIn">
                 <div className="relative aspect-square overflow-hidden rounded-2xl bg-bg-raised group cursor-zoom-in">
                   <Image
-                    src={photo.url}
-                    alt={photo.alt || `Foto ${i + 1} — ${gallery.title}`}
+                    src={photo!.url}
+                    alt={photo!.alt || `Foto ${i + 1} — ${gallery.title}`}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
@@ -97,10 +108,10 @@ export default async function GalleryPage({ params }: PageProps) {
             ))}
           </StaggerContainer>
 
-          {gallery.photoCount > photos.length && (
+          {totalCount > photos.length && (
             <AnimateIn variant="fadeUp" className="flex justify-center mt-10">
               <p className="font-body text-[0.9375rem] text-text-muted">
-                Mostrando {photos.length} de {gallery.photoCount} fotos
+                Mostrando {photos.length} de {totalCount} fotos
               </p>
             </AnimateIn>
           )}

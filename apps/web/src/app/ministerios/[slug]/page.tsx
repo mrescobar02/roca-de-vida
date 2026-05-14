@@ -9,21 +9,37 @@ import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { StaffCard, EventCard } from "@/components/cards";
 import { MinistryInterestForm } from "@/components/sections/MinistryInterestForm";
-import { MINISTRIES_DATA, MINISTRY_SLUGS } from "@/lib/mock/ministries";
-import { UPCOMING_EVENTS } from "@/lib/mock/events";
+import {
+  getMinistries,
+  getMinistryBySlug,
+  getUpcomingEvents,
+  richTextToPlain,
+} from "@/lib/payload/client";
+
+const MINISTRY_ACCENTS: Record<string, string> = {
+  hombres: "#1a4a8a",
+  mujeres: "#8a1a6a",
+  "roca-kids": "#d45f08",
+  prejuvenil: "#2d6a4f",
+  jovenes: "#4a1942",
+  "jovenes-adultos": "#1b4d5a",
+  bendecidos: "#7a5c1a",
+  metanoia: "#6a1a1a",
+};
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  // TODO: Replace with async fetch to Payload CMS
-  return MINISTRY_SLUGS.map((slug) => ({ slug }));
+export async function generateStaticParams() {
+  const result = await getMinistries();
+  return result.docs.map((m) => ({ slug: m.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const ministry = MINISTRIES_DATA[slug];
+  const result = await getMinistryBySlug(slug);
+  const ministry = result.docs[0];
   if (!ministry) return {};
   return {
     title: `${ministry.name} | Roca de Vida Panamá`,
@@ -31,36 +47,46 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+export const revalidate = 300;
+
 export default async function MinistryPage({ params }: PageProps) {
   const { slug } = await params;
-  const ministry = MINISTRIES_DATA[slug];
+  const [ministryResult, eventsResult] = await Promise.all([
+    getMinistryBySlug(slug),
+    getUpcomingEvents(10),
+  ]);
+
+  const ministry = ministryResult.docs[0];
   if (!ministry) notFound();
 
-  const { accent } = ministry;
-  const ministryEvents = UPCOMING_EVENTS.filter((e) => e.ministry?.slug === slug).slice(0, 3);
+  const accent = MINISTRY_ACCENTS[slug] ?? "var(--color-gold)";
+  const ministryEvents = eventsResult.docs
+    .filter((e) => e.ministry?.slug === slug)
+    .slice(0, 3);
+
+  const leaders = ministry.leaders ?? [];
 
   return (
     <>
       {/* ── Hero ────────────────────────────────────────────────── */}
       <section className="relative min-h-[60vh] flex items-end overflow-hidden">
         <div className="absolute inset-0">
-          <Image
-            src={ministry.heroImage.url}
-            alt={ministry.heroImage.alt}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-          />
-          {/* Overlay base */}
+          {ministry.heroImage && (
+            <Image
+              src={ministry.heroImage.url}
+              alt={ministry.heroImage.alt ?? ministry.name}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+          )}
           <div className="absolute inset-0 overlay-hero" aria-hidden />
-          {/* Overlay de color de acento del ministerio */}
           <div
             className="absolute inset-0 opacity-40 mix-blend-multiply"
             style={{ backgroundColor: accent }}
             aria-hidden
           />
-          {/* Gradiente inferior para legibilidad del texto */}
           <div
             className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-bg-base to-transparent"
             aria-hidden
@@ -69,8 +95,8 @@ export default async function MinistryPage({ params }: PageProps) {
 
         <Container className="relative z-10 pb-12 pt-40">
           <AnimateIn variant="fadeUp" trigger="mount" delay={0.15}>
-            <p className="text-label mb-3" style={{ color: accent === "#ffb347" ? accent : "var(--color-gold)" }}>
-              {ministry.category}
+            <p className="text-label mb-3" style={{ color: "var(--color-gold)" }}>
+              {ministry.category ?? "Ministerio"}
             </p>
             <h1 className="text-display text-text-primary leading-none max-w-[14ch]">
               {ministry.name}
@@ -126,21 +152,23 @@ export default async function MinistryPage({ params }: PageProps) {
       </section>
 
       {/* ── Versículo clave ──────────────────────────────────────── */}
-      <section className="bg-bg-base">
-        <Container section size="narrow">
-          <AnimateIn variant="scaleIn">
-            <ScriptureQuote
-              text={ministry.keyVerse}
-              reference={ministry.keyVerseRef}
-              size="large"
-              align="center"
-            />
-          </AnimateIn>
-        </Container>
-      </section>
+      {ministry.keyVerse?.text && (
+        <section className="bg-bg-base">
+          <Container section size="narrow">
+            <AnimateIn variant="scaleIn">
+              <ScriptureQuote
+                text={ministry.keyVerse.text}
+                reference={ministry.keyVerse.reference}
+                size="large"
+                align="center"
+              />
+            </AnimateIn>
+          </Container>
+        </section>
+      )}
 
       {/* ── Líderes ─────────────────────────────────────────────── */}
-      {ministry.leaders.length > 0 && (
+      {leaders.length > 0 && (
         <section className="bg-bg-surface">
           <Container section className="flex flex-col gap-10">
             <AnimateIn>
@@ -153,13 +181,17 @@ export default async function MinistryPage({ params }: PageProps) {
               className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"
               staggerDelay={0.1}
             >
-              {ministry.leaders.map((leader) => (
-                <AnimateInItem key={leader.name}>
+              {leaders.map((leader) => (
+                <AnimateInItem key={leader.id}>
                   <StaffCard
                     name={leader.name}
                     title={leader.title}
-                    photo={leader.photo}
-                    bio={leader.bio}
+                    photo={
+                      leader.photo
+                        ? { url: leader.photo.url, alt: leader.photo.alt ?? leader.name }
+                        : undefined
+                    }
+                    bio={richTextToPlain(leader.bio)}
                   />
                 </AnimateInItem>
               ))}
@@ -167,34 +199,6 @@ export default async function MinistryPage({ params }: PageProps) {
           </Container>
         </section>
       )}
-
-      {/* ── Galería placeholder ──────────────────────────────────── */}
-      <section className="bg-bg-base">
-        <Container section className="flex flex-col gap-8">
-          <AnimateIn>
-            <SectionHeading
-              label="Galería"
-              heading="Momentos del ministerio"
-            />
-          </AnimateIn>
-          <AnimateIn variant="fadeUp">
-            <div className="grid grid-cols-3 gap-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-square bg-bg-raised rounded-2xl border border-border flex items-center justify-center"
-                  aria-hidden
-                >
-                  <span className="text-label text-text-muted text-[0.625rem]">Foto</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-label text-text-muted text-[0.75rem] mt-4 text-center">
-              Fotografías próximamente
-            </p>
-          </AnimateIn>
-        </Container>
-      </section>
 
       {/* ── Próximos eventos ────────────────────────────────────── */}
       {ministryEvents.length > 0 && (
@@ -218,8 +222,11 @@ export default async function MinistryPage({ params }: PageProps) {
                     date={event.date}
                     time={event.time}
                     location={event.location}
-                    banner={event.banner}
-                    ministry={event.ministry}
+                    banner={{
+                      url: event.banner?.url ?? "",
+                      alt: event.banner?.alt ?? event.title,
+                    }}
+                    ministry={event.ministry ? { name: event.ministry.name, slug: event.ministry.slug } : undefined}
                   />
                 </AnimateInItem>
               ))}

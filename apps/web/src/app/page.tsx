@@ -9,67 +9,85 @@ import {
   DonationCTA,
   ContactCTA,
 } from "@/components/sections";
-import { CELL_GROUPS } from "@/lib/mock/groups";
 import { getLatestSermons, getIsLive, toSermonProps } from "@/lib/youtube/api";
-import { SERMONS } from "@/lib/mock/sermons";
-
-const MINISTRIES = [
-  { name: "Hombres", slug: "hombres", tagline: "Identidad y liderazgo", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=533&fit=crop", alt: "Ministerio de Hombres" } },
-  { name: "Mujeres", slug: "mujeres", tagline: "Propósito y comunidad", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=533&fit=crop", alt: "Ministerio de Mujeres" } },
-  { name: "Roca Kids", slug: "roca-kids", tagline: "Fe desde la infancia", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400&h=533&fit=crop", alt: "Roca Kids" } },
-  { name: "Prejuvenil", slug: "prejuvenil", tagline: "10 a 14 años", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&h=533&fit=crop", alt: "Prejuvenil" } },
-  { name: "Jóvenes", slug: "jovenes", tagline: "15 a 20 años", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=533&fit=crop&sig=1", alt: "Jóvenes" } },
-  { name: "Metanoia", slug: "metanoia", tagline: "Ministerio escolar", category: "Ministerio", heroImage: { url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=400&h=533&fit=crop", alt: "Metanoia" } },
-];
-
-// ─── Mock sermon fallback (used when YOUTUBE_API_KEY is not set) ─────────────
-const MOCK_FEATURED = {
-  title: SERMONS[0].title,
-  slug: SERMONS[0].slug,
-  youtubeUrl: SERMONS[0].youtubeUrl,
-  pastor: { name: SERMONS[0].pastor.name },
-  date: SERMONS[0].date,
-  series: SERMONS[0].series,
-  scripture: SERMONS[0].scripture,
-  duration: SERMONS[0].duration,
-};
-
-const MOCK_RECENT = SERMONS.slice(1, 4).map((s) => ({
-  title: s.title,
-  slug: s.slug,
-  youtubeUrl: s.youtubeUrl,
-  pastor: { name: s.pastor.name },
-  date: s.date,
-  series: s.series,
-  duration: s.duration,
-}));
-
-const EVENTS = [
-  { title: "Noche de Adoración", slug: "noche-adoracion-jun", date: "2025-06-15", time: "7:00 PM", location: "Templo principal, Panamá", ministry: { name: "Jóvenes", slug: "jovenes" }, banner: { url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=338&fit=crop", alt: "Noche de Adoración" } },
-  { title: "Retiro de Jóvenes Adultos", slug: "retiro-jovenes-jun", date: "2025-06-28", time: "8:00 AM", location: "Centro de Retiros, Capira", ministry: { name: "Jóvenes Adultos", slug: "jovenes-adultos" }, banner: { url: "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&h=338&fit=crop", alt: "Retiro de Jóvenes" } },
-  { title: "Conferencia de Liderazgo", slug: "conferencia-liderazgo-jul", date: "2025-07-05", time: "9:00 AM", location: "Templo principal", banner: { url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&h=338&fit=crop", alt: "Conferencia de Liderazgo" } },
-];
-
-const TESTIMONIALS = [
-  { id: "t1", name: "Sofía Martínez", ministry: "Ministerio de Mujeres", quote: "Roca de Vida me ayudó a encontrar mi propósito y a sanar heridas que cargaba por años. Estoy agradecida por cada persona en esta iglesia." },
-  { id: "t2", name: "Andrés López", ministry: "Jóvenes Adultos", quote: "Encontré una comunidad auténtica que me acompañó en los momentos más difíciles. Hoy puedo decir que la fe cambia vidas reales." },
-  { id: "t3", name: "Patricia Gómez", ministry: "Bendecidos para Bendecir", quote: "Este ministerio me enseñó que servir es la forma más alta de vivir. Mi vida tiene un nuevo significado desde que llegué a RDV." },
-  { id: "t4", name: "Roberto Sánchez", ministry: "Ministerio de Hombres", quote: "Dios restauró mi familia a través de esta iglesia. Lo que parecía imposible, Él lo hizo posible en menos de un año." },
-  { id: "t5", name: "Camila Herrera", ministry: "Roca Kids (voluntaria)", quote: "Ver crecer la fe de los niños semana a semana es el privilegio más grande que he tenido. Esta iglesia me dio un corazón para servir." },
-];
+import {
+  getMinistries,
+  getUpcomingEvents,
+  getCellGroups,
+  getFeaturedTestimonials,
+  getSermons,
+  richTextToPlain,
+  type CmsSermon,
+} from "@/lib/payload/client";
 
 export const revalidate = 60;
 
-export default async function HomePage() {
-  const [ytVideos, liveStatus] = await Promise.all([
-    getLatestSermons(4),
-    getIsLive(),
-  ]);
+function cmsSermonToProps(s: CmsSermon) {
+  return {
+    title: s.title,
+    slug: s.slug,
+    youtubeUrl: s.youtubeUrl,
+    pastor: { name: s.pastor?.name ?? "Roca de Vida" },
+    date: s.date,
+    series: s.series,
+    duration: s.duration,
+    thumbnail: s.thumbnail ? { url: s.thumbnail.url, alt: s.thumbnail.alt ?? s.title } : undefined,
+  };
+}
 
-  const featuredSermon = ytVideos.length > 0 ? toSermonProps(ytVideos[0]) : MOCK_FEATURED;
-  const recentSermons = ytVideos.length > 1
-    ? ytVideos.slice(1, 4).map(toSermonProps)
-    : MOCK_RECENT;
+export default async function HomePage() {
+  const [ytVideos, liveStatus, ministriesResult, eventsResult, groupsResult, testimonialsResult, cmsSermons] =
+    await Promise.all([
+      getLatestSermons(4),
+      getIsLive(),
+      getMinistries(),
+      getUpcomingEvents(3),
+      getCellGroups(),
+      getFeaturedTestimonials(),
+      getSermons({ limit: 4 }),
+    ]);
+
+  const featuredSermon =
+    ytVideos.length > 0
+      ? toSermonProps(ytVideos[0])
+      : cmsSermons.docs.length > 0
+        ? cmsSermonToProps(cmsSermons.docs[0])
+        : null;
+
+  const recentSermons =
+    ytVideos.length > 1
+      ? ytVideos.slice(1, 4).map(toSermonProps)
+      : cmsSermons.docs.slice(1, 4).map(cmsSermonToProps);
+
+  const ministries = ministriesResult.docs.map((m) => ({
+    name: m.name,
+    slug: m.slug,
+    tagline: m.tagline,
+    category: m.category ?? "Ministerio",
+    heroImage: m.heroImage
+      ? { url: m.heroImage.url, alt: m.heroImage.alt ?? m.name }
+      : { url: "", alt: m.name },
+  }));
+
+  const events = eventsResult.docs.map((e) => ({
+    title: e.title,
+    slug: e.slug,
+    date: e.date,
+    time: e.time,
+    location: e.location,
+    ministry: e.ministry ? { name: e.ministry.name, slug: e.ministry.slug } : undefined,
+    banner: { url: e.banner?.url ?? "", alt: e.banner?.alt ?? e.title },
+  }));
+
+  const groups = groupsResult.docs;
+  const districts = [...new Set(groups.map((g) => g.district))];
+
+  const testimonials = testimonialsResult.docs.map((t) => ({
+    id: t.id,
+    quote: richTextToPlain(t.content),
+    name: t.name,
+    ministry: t.ministry?.name,
+  }));
 
   return (
     <>
@@ -92,30 +110,34 @@ export default async function HomePage() {
         ]}
       />
 
-      <MinistriesPreview ministries={MINISTRIES} />
+      <MinistriesPreview ministries={ministries} />
 
-      <LatestSermonsSection
-        featured={featuredSermon}
-        recent={recentSermons}
-      />
+      {featuredSermon && (
+        <LatestSermonsSection
+          featured={featuredSermon}
+          recent={recentSermons}
+        />
+      )}
 
-      <EventsPreview events={EVENTS} />
+      <EventsPreview events={events} />
 
       <CellGroupsTeaser
-        totalGroups={CELL_GROUPS.length}
-        neighborhoods={[...new Set(CELL_GROUPS.map((g) => g.district))].length}
-        groups={CELL_GROUPS.filter((g) => g.lat != null && g.lng != null).map((g) => ({
-          slug: g.slug,
-          name: g.name,
-          neighborhood: g.neighborhood,
-          schedule: g.schedule,
-          isFull: g.isFull,
-          lat: g.lat!,
-          lng: g.lng!,
-        }))}
+        totalGroups={groups.length}
+        neighborhoods={districts.length}
+        groups={groups
+          .filter((g) => g.coordinates?.lat != null && g.coordinates?.lng != null)
+          .map((g) => ({
+            slug: g.slug,
+            name: g.name,
+            neighborhood: g.neighborhood,
+            schedule: g.schedule,
+            isFull: g.isFull ?? false,
+            lat: g.coordinates!.lat,
+            lng: g.coordinates!.lng,
+          }))}
       />
 
-      <TestimonialsSection testimonials={TESTIMONIALS} />
+      <TestimonialsSection testimonials={testimonials} />
 
       <DonationCTA />
 

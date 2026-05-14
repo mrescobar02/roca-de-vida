@@ -8,15 +8,41 @@ import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/
 import { Badge } from "@/components/ui/badge";
 import { formatDate, getYoutubeThumbnail, getYoutubeVideoId } from "@rdv/utils";
 import { cn } from "@rdv/utils";
-import { STUDIES } from "@/lib/mock/sermons";
+import { getSermons } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Estudios Bíblicos | Roca de Vida Panamá",
   description: "Estudios bíblicos expositivos de Roca de Vida Panamá. Libro por libro, tema por tema.",
 };
 
-export default function EstudiosPage() {
-  const series = [...new Set(STUDIES.filter((s) => s.series).map((s) => s.series!))];
+export const revalidate = 3600;
+
+interface Study {
+  title: string;
+  slug: string;
+  youtubeUrl: string;
+  teacher: { name: string };
+  date: string;
+  series?: string;
+  book?: string;
+  duration?: string;
+}
+
+export default async function EstudiosPage() {
+  const result = await getSermons({ limit: 50 });
+
+  const studies: Study[] = result.docs.map((s) => ({
+    title: s.title,
+    slug: s.slug,
+    youtubeUrl: s.youtubeUrl,
+    teacher: { name: s.pastor?.name ?? "Roca de Vida" },
+    date: s.date,
+    series: s.series,
+    book: s.scripture?.split(" ")[0],
+    duration: s.duration,
+  }));
+
+  const seriesList = [...new Set(studies.filter((s) => s.series).map((s) => s.series!))];
 
   return (
     <>
@@ -42,8 +68,8 @@ export default function EstudiosPage() {
         <Container section className="flex flex-col gap-14">
 
           {/* Por serie */}
-          {series.map((seriesName) => {
-            const items = STUDIES.filter((s) => s.series === seriesName);
+          {seriesList.map((seriesName) => {
+            const items = studies.filter((s) => s.series === seriesName);
             return (
               <div key={seriesName} className="flex flex-col gap-6">
                 <AnimateIn>
@@ -66,7 +92,7 @@ export default function EstudiosPage() {
 
           {/* Independientes */}
           {(() => {
-            const standalone = STUDIES.filter((s) => !s.series);
+            const standalone = studies.filter((s) => !s.series);
             if (!standalone.length) return null;
             return (
               <div className="flex flex-col gap-6">
@@ -110,9 +136,7 @@ export default function EstudiosPage() {
   );
 }
 
-// ── StudyCard ─────────────────────────────────────────────────────────────────
-
-function StudyCard({ study }: { study: typeof STUDIES[0] }) {
+function StudyCard({ study }: { study: Study }) {
   const videoId = getYoutubeVideoId(study.youtubeUrl);
   const thumb = getYoutubeThumbnail(study.youtubeUrl, "hqdefault");
 
@@ -166,6 +190,15 @@ function StudyCard({ study }: { study: typeof STUDIES[0] }) {
             <Calendar size={11} strokeWidth={1.5} aria-hidden />
             <time dateTime={study.date} className="font-body text-[0.8125rem]">{formatDate(study.date)}</time>
           </div>
+          {study.duration && (
+            <>
+              <span className="text-text-muted" aria-hidden>·</span>
+              <div className="flex items-center gap-1 text-text-muted">
+                <Clock size={11} strokeWidth={1.5} aria-hidden />
+                <span className="font-body text-[0.8125rem]">{study.duration}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Link>

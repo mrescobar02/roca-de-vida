@@ -8,14 +8,19 @@ import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@rdv/utils";
 import { cn } from "@rdv/utils";
-import { GALLERIES } from "@/lib/mock/gallery";
+import { getGalleries } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Galería | Roca de Vida Panamá",
   description: "Fotos y momentos de la comunidad de Roca de Vida Panamá.",
 };
 
-export default function GaleriaPage() {
+export const revalidate = 300;
+
+export default async function GaleriaPage() {
+  const result = await getGalleries();
+  const galleries = result.docs;
+
   return (
     <>
       {/* Hero */}
@@ -43,8 +48,8 @@ export default function GaleriaPage() {
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
             staggerDelay={0.08}
           >
-            {GALLERIES.map((gallery) => (
-              <AnimateInItem key={gallery.slug}>
+            {galleries.map((gallery) => (
+              <AnimateInItem key={gallery.id}>
                 <Link
                   href={`/galeria/${gallery.slug}`}
                   className={cn(
@@ -55,19 +60,27 @@ export default function GaleriaPage() {
                 >
                   {/* Cover */}
                   <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={gallery.coverImage.url}
-                      alt={gallery.coverImage.alt}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
-                    />
+                    {gallery.coverImage ? (
+                      <Image
+                        src={gallery.coverImage.url}
+                        alt={gallery.coverImage.alt ?? gallery.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.04]"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-bg-raised flex items-center justify-center">
+                        <Camera size={32} strokeWidth={1} className="text-border" />
+                      </div>
+                    )}
                     <div className="absolute inset-0 overlay-card opacity-60 group-hover:opacity-80 transition-opacity duration-300" aria-hidden />
 
                     {/* Count badge */}
                     <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/70 px-2.5 py-1 rounded-sm">
                       <Camera size={11} strokeWidth={1.5} className="text-gold" aria-hidden />
-                      <span className="text-label text-text-secondary text-[0.625rem]">{gallery.photoCount} fotos</span>
+                      <span className="text-label text-text-secondary text-[0.625rem]">
+                        {gallery.photoCount ?? gallery.photos?.length ?? 0} fotos
+                      </span>
                     </div>
                   </div>
 

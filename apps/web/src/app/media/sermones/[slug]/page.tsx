@@ -10,21 +10,18 @@ import { Badge } from "@/components/ui/badge";
 import { SermonCard } from "@/components/cards";
 import { YoutubeEmbed } from "@/components/media/YoutubeEmbed";
 import { formatDate, getYoutubeThumbnail, getYoutubeEmbedUrl } from "@rdv/utils";
-import { SERMONS } from "@/lib/mock/sermons";
 import {
   getVideoById,
   getLatestSermons,
   toSermonProps,
   isYoutubeId,
-  type YoutubeSermon,
   type SermonProps,
 } from "@/lib/youtube/api";
+import { getSermons, getSermonBySlug } from "@/lib/payload/client";
 
 export const revalidate = 3600;
 
 type PageProps = { params: Promise<{ slug: string }> };
-
-// ─── Data fetching ────────────────────────────────────────────────────────────
 
 type SermonData = {
   title: string;
@@ -48,19 +45,23 @@ async function getSermonData(slug: string): Promise<SermonData | null> {
     return { ...props, description: video.description.slice(0, 500) };
   }
 
-  const mock = SERMONS.find((s) => s.slug === slug);
-  if (!mock) return null;
+  const result = await getSermonBySlug(slug);
+  const sermon = result.docs[0];
+  if (!sermon) return null;
+
   return {
-    title: mock.title,
-    slug: mock.slug,
-    youtubeUrl: mock.youtubeUrl,
-    pastor: { name: mock.pastor.name },
-    date: mock.date,
-    series: mock.series,
-    seriesSlug: mock.seriesSlug,
-    scripture: mock.scripture,
-    duration: mock.duration,
-    description: mock.description,
+    title: sermon.title,
+    slug: sermon.slug,
+    youtubeUrl: sermon.youtubeUrl,
+    pastor: { name: sermon.pastor?.name ?? "Roca de Vida" },
+    date: sermon.date,
+    series: sermon.series,
+    scripture: sermon.scripture,
+    duration: sermon.duration,
+    description: sermon.description,
+    thumbnail: sermon.thumbnail
+      ? { url: sermon.thumbnail.url, alt: sermon.thumbnail.alt ?? sermon.title }
+      : undefined,
   };
 }
 
@@ -72,32 +73,34 @@ async function getRelatedSermons(current: SermonData): Promise<SermonProps[]> {
       .slice(0, 3)
       .map(toSermonProps);
   }
-  return SERMONS.filter(
-    (s) =>
-      s.slug !== current.slug &&
-      (s.seriesSlug === current.seriesSlug || s.pastor.name === current.pastor.name)
-  )
+
+  const result = await getSermons({ limit: 10 });
+  return result.docs
+    .filter((s) => s.slug !== current.slug)
+    .filter((s) => !current.series || s.series === current.series)
     .slice(0, 3)
     .map((s) => ({
       title: s.title,
       slug: s.slug,
       youtubeUrl: s.youtubeUrl,
-      pastor: { name: s.pastor.name },
+      pastor: { name: s.pastor?.name ?? "Roca de Vida" },
       date: s.date,
       duration: s.duration,
+      thumbnail: s.thumbnail
+        ? { url: s.thumbnail.url, alt: s.thumbnail.alt ?? s.title }
+        : undefined,
     }));
 }
 
-// ─── Static params ────────────────────────────────────────────────────────────
-
 export async function generateStaticParams() {
-  const ytVideos = await getLatestSermons(20);
+  const [ytVideos, cmsResult] = await Promise.all([
+    getLatestSermons(20),
+    getSermons({ limit: 50 }),
+  ]);
   const ytParams = ytVideos.map((v) => ({ slug: v.videoId }));
-  const mockParams = SERMONS.map((s) => ({ slug: s.slug }));
-  return [...ytParams, ...mockParams];
+  const cmsParams = cmsResult.docs.map((s) => ({ slug: s.slug }));
+  return [...ytParams, ...cmsParams];
 }
-
-// ─── Metadata ────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -120,8 +123,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
   };
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function SermonPage({ params }: PageProps) {
   const { slug } = await params;

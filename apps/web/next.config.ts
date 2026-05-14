@@ -32,6 +32,16 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i0.wp.com",
       },
+      // Payload CMS — Railway production
+      {
+        protocol: "https",
+        hostname: "roca-de-vida-cms-production.up.railway.app",
+      },
+      // Payload CMS — local dev
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
     ],
   },
   async headers() {

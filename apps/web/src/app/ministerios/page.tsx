@@ -3,14 +3,19 @@ import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { MinistryCard } from "@/components/cards";
 import { StaggerContainer, AnimateInItem, AnimateIn } from "@/components/common/AnimateIn";
-import { MINISTRIES_LIST } from "@/lib/mock/ministries";
+import { getMinistries } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Ministerios | Roca de Vida Panamá",
   description: "Descubre los ministerios de Roca de Vida Panamá. Hay un lugar para cada etapa de vida.",
 };
 
-export default function MinistriosPage() {
+export const revalidate = 300;
+
+export default async function MinistriosPage() {
+  const result = await getMinistries();
+  const ministries = result.docs;
+
   return (
     <>
       {/* Page hero */}
@@ -41,14 +46,17 @@ export default function MinistriosPage() {
             className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6"
             staggerDelay={0.06}
           >
-            {MINISTRIES_LIST.map((ministry) => (
-              <AnimateInItem key={ministry.slug}>
+            {ministries.map((ministry) => (
+              <AnimateInItem key={ministry.id}>
                 <MinistryCard
                   name={ministry.name}
                   slug={ministry.slug}
                   tagline={ministry.tagline}
-                  category={ministry.category}
-                  heroImage={ministry.heroImage}
+                  category={ministry.category ?? "Ministerio"}
+                  heroImage={{
+                    url: ministry.heroImage?.url ?? "",
+                    alt: ministry.heroImage?.alt ?? ministry.name,
+                  }}
                   aspect="portrait"
                 />
               </AnimateInItem>

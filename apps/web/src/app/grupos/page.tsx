@@ -3,11 +3,18 @@ import { MapPin } from "lucide-react";
 import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn } from "@/components/common/AnimateIn";
-import { GroupsExplorer } from "@/components/groups/GroupsExplorer";
+import { GroupsExplorer, type CellGroupData } from "@/components/groups/GroupsExplorer";
 import { FeSinFronterasCard } from "@/components/groups/FeSinFronterasCard";
-import { CELL_GROUPS, GROUP_DISTRICTS, GROUP_DAYS } from "@/lib/mock/groups";
+import { getCellGroups, richTextToPlain } from "@/lib/payload/client";
 
-// TODO: replace with Payload fetch — global "feSinFronterasJoinUrl" field
+const DISTRICT_LABELS: Record<string, string> = {
+  "ciudad-panama": "Ciudad de Panamá",
+  "san-miguelito": "San Miguelito",
+  "panama-oeste": "Panamá Oeste",
+  chorrera: "La Chorrera",
+  otro: "Otro",
+};
+
 // Leave undefined to hide the CTA; set to a Google Meet URL to show it
 const FE_SIN_FRONTERAS_JOIN_URL: string | undefined = undefined;
 
@@ -16,8 +23,33 @@ export const metadata: Metadata = {
   description: "Encuentra un grupo celular cerca de ti. Nos reunimos en toda la ciudad para crecer juntos en la fe.",
 };
 
-export default function GruposPage() {
-  const available = CELL_GROUPS.filter((g) => !g.isFull).length;
+export const revalidate = 300;
+
+export default async function GruposPage() {
+  const result = await getCellGroups();
+  const rawGroups = result.docs;
+
+  const groups: CellGroupData[] = rawGroups.map((g) => ({
+    name: g.name,
+    slug: g.slug,
+    neighborhood: g.neighborhood,
+    district: DISTRICT_LABELS[g.district] ?? g.district,
+    day: g.schedule?.split(" ")[0] ?? "Otro",
+    schedule: g.schedule,
+    leaderName: g.leader?.name ?? "",
+    leaderTitle: g.leader?.title,
+    capacity: g.capacity ?? 0,
+    enrolled: 0,
+    isFull: g.isFull ?? false,
+    address: g.address,
+    bio: richTextToPlain(g.description),
+    lat: g.coordinates?.lat,
+    lng: g.coordinates?.lng,
+  }));
+
+  const available = groups.filter((g) => !g.isFull).length;
+  const districts = [...new Set(groups.map((g) => g.district))];
+  const days = [...new Set(groups.map((g) => g.day))];
 
   return (
     <>
@@ -40,13 +72,12 @@ export default function GruposPage() {
             />
           </AnimateIn>
 
-          {/* Stats rápidos */}
           <AnimateIn variant="fadeUp" delay={0.15}>
             <div className="flex flex-wrap justify-center gap-8 mt-10">
               {[
-                { value: CELL_GROUPS.length, label: "grupos en total" },
+                { value: groups.length, label: "grupos en total" },
                 { value: available, label: "con espacio disponible" },
-                { value: GROUP_DISTRICTS.length, label: "sectores cubiertos" },
+                { value: districts.length, label: "sectores cubiertos" },
               ].map(({ value, label }) => (
                 <div key={label} className="flex flex-col items-center gap-1">
                   <span className="font-display font-900 text-gold text-[2.5rem] leading-none">{value}</span>
@@ -72,9 +103,9 @@ export default function GruposPage() {
         <Container section>
           <AnimateIn>
             <GroupsExplorer
-              groups={CELL_GROUPS}
-              districts={GROUP_DISTRICTS}
-              days={GROUP_DAYS}
+              groups={groups}
+              districts={districts}
+              days={days}
             />
           </AnimateIn>
         </Container>

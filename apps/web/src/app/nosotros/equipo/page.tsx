@@ -4,37 +4,19 @@ import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { StaffCard } from "@/components/cards";
+import { getStaff, richTextToPlain } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Equipo Pastoral | Roca de Vida Panamá",
   description: "Conoce a los pastores y líderes que guían Roca de Vida Panamá.",
 };
 
-const PASTORS = [
-  {
-    name: "Juan Mario Herrero",
-    title: "Pastor Principal",
-    bio: "Un maestro de la Palabra dedicado a la exposición fiel de las Escrituras. Su liderazgo se centra en el arrepentimiento como inicio de una nueva vida en Cristo, la sana doctrina, el fortalecimiento de la familia y una profunda pasión por el evangelismo.",
-    photo: {
-      url: "https://i0.wp.com/rocadevidapanama.com/wp-content/uploads/2026/02/RDV-JM-LDH-4-scaled.jpg?resize=683%2C1024&ssl=1",
-      alt: "Pastor Juan Mario Herrero",
-    },
-  },
-  {
-    name: "Giordano Donado",
-    title: "Pastor",
-    bio: "Comprometido con el discipulado y el crecimiento espiritual de la congregación. Lidera con pasión, sirviendo al cuerpo de Cristo con integridad y amor genuino por las personas.",
-    photo: undefined,
-  },
-  {
-    name: "Carlos Pelaez",
-    title: "Pastor",
-    bio: "Su corazón por la familia y la comunidad se refleja en su ministerio pastoral. Acompaña a las personas en los momentos más importantes de su caminar con Dios.",
-    photo: undefined,
-  },
-];
+export const revalidate = 300;
 
-export default function EquipoPage() {
+export default async function EquipoPage() {
+  const result = await getStaff({ isPastoralTeam: true });
+  const pastors = result.docs;
+
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────── */}
@@ -73,13 +55,17 @@ export default function EquipoPage() {
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"
             staggerDelay={0.12}
           >
-            {PASTORS.map((pastor) => (
-              <AnimateInItem key={pastor.name}>
+            {pastors.map((pastor) => (
+              <AnimateInItem key={pastor.id}>
                 <StaffCard
                   name={pastor.name}
                   title={pastor.title}
-                  photo={pastor.photo}
-                  bio={pastor.bio}
+                  photo={
+                    pastor.photo
+                      ? { url: pastor.photo.url, alt: pastor.photo.alt ?? pastor.name }
+                      : undefined
+                  }
+                  bio={richTextToPlain(pastor.bio)}
                 />
               </AnimateInItem>
             ))}

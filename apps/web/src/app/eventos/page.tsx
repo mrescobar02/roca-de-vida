@@ -4,16 +4,35 @@ import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { EventCard } from "@/components/cards";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
-import { UPCOMING_EVENTS, PAST_EVENTS } from "@/lib/mock/events";
+import { getUpcomingEvents, getPastEvents } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Eventos | Roca de Vida Panamá",
   description: "Próximos eventos y actividades de Roca de Vida Panamá.",
 };
 
-export default function EventosPage() {
-  const featured = UPCOMING_EVENTS.find((e) => e.isFeatured);
-  const rest = UPCOMING_EVENTS.filter((e) => !e.isFeatured);
+export const revalidate = 60;
+
+export default async function EventosPage() {
+  const [upcomingResult, pastResult] = await Promise.all([
+    getUpcomingEvents(20),
+    getPastEvents(12),
+  ]);
+
+  const upcomingEvents = upcomingResult.docs;
+  const pastEvents = pastResult.docs;
+
+  const featured = upcomingEvents.find((e) => e.isFeatured) ?? upcomingEvents[0];
+  const rest = featured
+    ? upcomingEvents.filter((e) => e.id !== featured.id)
+    : [];
+
+  function eventBanner(e: typeof upcomingEvents[0]) {
+    return { url: e.banner?.url ?? "", alt: e.banner?.alt ?? e.title };
+  }
+  function eventMinistry(e: typeof upcomingEvents[0]) {
+    return e.ministry ? { name: e.ministry.name, slug: e.ministry.slug } : undefined;
+  }
 
   return (
     <>
@@ -50,8 +69,8 @@ export default function EventosPage() {
                   date={featured.date}
                   time={featured.time}
                   location={featured.location}
-                  banner={featured.banner}
-                  ministry={featured.ministry}
+                  banner={eventBanner(featured)}
+                  ministry={eventMinistry(featured)}
                   priority
                   className="max-w-lg"
                 />
@@ -76,8 +95,8 @@ export default function EventosPage() {
                       endDate={event.endDate}
                       time={event.time}
                       location={event.location}
-                      banner={event.banner}
-                      ministry={event.ministry}
+                      banner={eventBanner(event)}
+                      ministry={eventMinistry(event)}
                     />
                   </AnimateInItem>
                 ))}
@@ -86,7 +105,7 @@ export default function EventosPage() {
           )}
 
           {/* Eventos pasados */}
-          {PAST_EVENTS.length > 0 && (
+          {pastEvents.length > 0 && (
             <div className="flex flex-col gap-6">
               <AnimateIn>
                 <div className="flex items-center gap-4">
@@ -95,7 +114,7 @@ export default function EventosPage() {
                 </div>
               </AnimateIn>
               <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" staggerDelay={0.08}>
-                {PAST_EVENTS.map((event) => (
+                {pastEvents.map((event) => (
                   <AnimateInItem key={event.slug}>
                     <EventCard
                       title={event.title}
@@ -103,8 +122,8 @@ export default function EventosPage() {
                       date={event.date}
                       time={event.time}
                       location={event.location}
-                      banner={event.banner}
-                      ministry={event.ministry}
+                      banner={eventBanner(event)}
+                      ministry={eventMinistry(event)}
                       className="opacity-70 hover:opacity-100 transition-opacity"
                     />
                   </AnimateInItem>

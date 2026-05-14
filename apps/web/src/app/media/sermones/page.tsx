@@ -5,7 +5,7 @@ import { SermonCard } from "@/components/cards";
 import { AnimateIn } from "@/components/common/AnimateIn";
 import { SermonsFilter } from "@/components/media/SermonsFilter";
 import { getLatestSermons, toSermonProps } from "@/lib/youtube/api";
-import { SERMONS, SERMON_SERIES, SERMON_PASTORS } from "@/lib/mock/sermons";
+import { getSermons, type CmsSermon } from "@/lib/payload/client";
 
 export const revalidate = 3600;
 
@@ -14,30 +14,45 @@ export const metadata: Metadata = {
   description: "Archivo completo de sermones de Roca de Vida Panamá. Filtra por serie, pastor o fecha.",
 };
 
+function cmsToSermonCard(s: CmsSermon) {
+  return {
+    title: s.title,
+    slug: s.slug,
+    youtubeUrl: s.youtubeUrl,
+    pastor: { name: s.pastor?.name ?? "Roca de Vida" },
+    date: s.date,
+    series: s.series,
+    duration: s.duration,
+    thumbnail: s.thumbnail
+      ? { url: s.thumbnail.url, alt: s.thumbnail.alt ?? s.title }
+      : undefined,
+  };
+}
+
 export default async function SermonesPage() {
-  const ytVideos = await getLatestSermons(50);
+  const [ytVideos, cmsResult] = await Promise.all([
+    getLatestSermons(50),
+    getSermons({ limit: 50 }),
+  ]);
+
   const useYT = ytVideos.length > 0;
 
   const allSermons = useYT
     ? ytVideos.map(toSermonProps)
-    : SERMONS.map((s) => ({
-        title: s.title,
-        slug: s.slug,
-        youtubeUrl: s.youtubeUrl,
-        pastor: { name: s.pastor.name },
-        date: s.date,
-        series: s.series,
-        duration: s.duration,
-        thumbnail: undefined as undefined,
-      }));
+    : cmsResult.docs.map(cmsToSermonCard);
 
   const featured = allSermons[0];
   const rest = allSermons.slice(1);
 
-  const series = useYT ? [] : SERMON_SERIES;
+  const series = useYT
+    ? []
+    : [...new Set(cmsResult.docs.flatMap((s) => (s.series ? [s.series] : [])))].map(
+        (name) => ({ name, slug: name.toLowerCase().replace(/\s+/g, "-") })
+      );
+
   const pastors = useYT
     ? [...new Set(allSermons.map((s) => s.pastor.name))]
-    : SERMON_PASTORS;
+    : [...new Set(cmsResult.docs.map((s) => s.pastor?.name ?? "Roca de Vida"))];
 
   return (
     <>
@@ -63,23 +78,25 @@ export default async function SermonesPage() {
         <Container section className="flex flex-col gap-14">
 
           {/* Sermón destacado */}
-          <AnimateIn variant="fadeUp" amount={0.15}>
-            <div className="flex flex-col gap-3">
-              <p className="text-label text-gold">Último mensaje</p>
-              <SermonCard
-                layout="featured"
-                title={featured.title}
-                slug={featured.slug}
-                youtubeUrl={featured.youtubeUrl}
-                pastor={featured.pastor}
-                date={featured.date}
-                series={"series" in featured ? (featured as any).series : undefined}
-                duration={featured.duration}
-                thumbnail={featured.thumbnail}
-                priority
-              />
-            </div>
-          </AnimateIn>
+          {featured && (
+            <AnimateIn variant="fadeUp" amount={0.15}>
+              <div className="flex flex-col gap-3">
+                <p className="text-label text-gold">Último mensaje</p>
+                <SermonCard
+                  layout="featured"
+                  title={featured.title}
+                  slug={featured.slug}
+                  youtubeUrl={featured.youtubeUrl}
+                  pastor={featured.pastor}
+                  date={featured.date}
+                  series={"series" in featured ? (featured as { series?: string }).series : undefined}
+                  duration={featured.duration}
+                  thumbnail={featured.thumbnail}
+                  priority
+                />
+              </div>
+            </AnimateIn>
+          )}
 
           {/* Filtro + archivo */}
           <AnimateIn>

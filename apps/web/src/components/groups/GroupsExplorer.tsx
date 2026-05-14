@@ -3,7 +3,23 @@
 import * as React from "react";
 import { cn } from "@rdv/utils";
 import { CellGroupCard } from "@/components/cards";
-import type { CellGroupData } from "@/lib/mock/groups";
+export interface CellGroupData {
+  name: string;
+  slug: string;
+  neighborhood: string;
+  district: string;
+  day: string;
+  schedule: string;
+  leaderName: string;
+  leaderTitle?: string;
+  capacity: number;
+  enrolled: number;
+  isFull: boolean;
+  address?: string;
+  bio: string;
+  lat?: number;
+  lng?: number;
+}
 
 interface GroupsExplorerProps {
   groups: CellGroupData[];
