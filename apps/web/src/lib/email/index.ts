@@ -5,10 +5,6 @@ import type { ReactElement } from "react";
 // Agregar también: RESEND_FROM_EMAIL (ej. "Roca de Vida <donaciones@rocadevidapanama.com>")
 // El dominio rocadevidapanama.com debe estar verificado en resend.com/domains
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const FROM = process.env.RESEND_FROM_EMAIL ?? "Roca de Vida Panamá <noreply@rocadevidapanama.com>";
-
 interface SendOptions {
   to: string;
   subject: string;
@@ -16,10 +12,14 @@ interface SendOptions {
 }
 
 export async function sendEmail({ to, subject, react }: SendOptions) {
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
     console.warn("[email] RESEND_API_KEY no configurada — email no enviado:", { to, subject });
     return;
   }
+  // Instancia lazy para evitar errores en build cuando la env var no está disponible
+  const resend = new Resend(apiKey);
+  const FROM   = process.env.RESEND_FROM_EMAIL ?? "Roca de Vida Panamá <noreply@rocadevidapanama.com>";
   const { error } = await resend.emails.send({ from: FROM, to, subject, react });
   if (error) console.error("[email] Error enviando email:", error);
 }
