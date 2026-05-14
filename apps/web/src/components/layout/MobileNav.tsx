@@ -11,6 +11,7 @@ import { NAV_ITEMS } from "./nav-config";
 interface MobileNavProps {
   isOpen: boolean;
   onClose: () => void;
+  navItems: typeof NAV_ITEMS;
 }
 
 // Curvas bezier tipadas como tuplas para Framer Motion v12
@@ -40,7 +41,7 @@ const itemVariants: Variants = {
   open:   { opacity: 1, x: 0, transition: { duration: 0.4, ease: EASE_OUT_EXPO } },
 };
 
-export function MobileNav({ isOpen, onClose }: MobileNavProps) {
+export function MobileNav({ isOpen, onClose, navItems }: MobileNavProps) {
   const pathname = usePathname();
   const [expandedItem, setExpandedItem] = React.useState<string | null>(null);
 
@@ -120,7 +121,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
               className="flex flex-col flex-1 overflow-y-auto px-6 py-6 gap-1"
               role="list"
             >
-              {NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const isExpanded = expandedItem === item.label;
                 const isActive =
                   pathname === item.href ||

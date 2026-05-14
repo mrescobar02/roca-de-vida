@@ -13,6 +13,18 @@ export interface NavItem {
   children?: NavChild[];
 }
 
+// Ministerios que aparecen en el nav, en orden.
+// label y description vienen del CMS; descriptionOverride quema una descripción fija
+// cuando el ministerio es especial (ej. Jóvenes abarca 3 sub-grupos).
+export const MINISTRY_NAV_SLUGS: Array<{ slug: string; descriptionOverride?: string }> = [
+  { slug: "hombres" },
+  { slug: "mujeres" },
+  { slug: "roca-kids" },
+  { slug: "jovenes", descriptionOverride: "Prejuvenil, Jóvenes y Jóvenes Adultos" },
+  { slug: "bendecidos" },
+  { slug: "metanoia" },
+];
+
 export const NAV_ITEMS: NavItem[] = [
   {
     label: "Inicio",

@@ -9,11 +9,21 @@ import { cn } from "@rdv/utils";
 import { NAV_ITEMS, type NavItem } from "./nav-config";
 import { MobileNav, RdvLogo } from "./MobileNav";
 
-export function Header() {
+interface HeaderProps {
+  ministries?: Array<{ label: string; href: string; description?: string }>;
+}
+
+export function Header({ ministries = [] }: HeaderProps) {
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   const [activeDropdown, setActiveDropdown] = React.useState<string | null>(null);
   const pathname = usePathname();
+
+  const navItems = NAV_ITEMS.map((item) =>
+    item.label === "Ministerios" && ministries.length > 0
+      ? { ...item, children: ministries }
+      : item
+  );
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Detectar scroll — también chequea posición inicial para back-navigation
@@ -64,7 +74,7 @@ export function Header() {
               className="hidden lg:flex items-center gap-1"
               aria-label="Navegación principal"
             >
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <NavLink
                   key={item.label}
                   item={item}
@@ -118,6 +128,7 @@ export function Header() {
       <MobileNav
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        navItems={navItems}
       />
     </>
   );

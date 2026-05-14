@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { Header } from "@/components/layout/Header";
+import { getMinistries } from "@/lib/payload/client";
+import { MINISTRY_NAV_SLUGS } from "@/components/layout/nav-config";
 import { Footer } from "@/components/layout/Footer";
 import { PrayerWidget } from "@/components/common/PrayerWidget";
 import "@/styles/globals.css";
@@ -31,11 +33,19 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const ministriesResult = await getMinistries().catch(() => ({ docs: [] }));
+  const cmsMap = new Map(ministriesResult.docs.map((m) => [m.slug, m]));
+  const ministries = MINISTRY_NAV_SLUGS.flatMap(({ slug, descriptionOverride }) => {
+    const m = cmsMap.get(slug);
+    if (!m) return [];
+    return [{ label: m.name, href: `/ministerios/${m.slug}`, description: descriptionOverride ?? m.tagline }];
+  });
+
   return (
     <html
       lang="es"
@@ -49,7 +59,7 @@ export default function RootLayout({
         >
           Ir al contenido principal
         </a>
-        <Header />
+        <Header ministries={ministries} />
         <main id="main-content">{children}</main>
         <Footer />
         <PrayerWidget />
