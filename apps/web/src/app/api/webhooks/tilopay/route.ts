@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendEmail } from "@/lib/email";
+import { DonationConfirmation } from "@/emails/DonationConfirmation";
+import { SubscriptionConfirmation } from "@/emails/SubscriptionConfirmation";
 
 const CMS_URL     = process.env.NEXT_PUBLIC_CMS_URL!;
 const PAYLOAD_KEY = process.env.PAYLOAD_API_KEY!;
 const SITE_URL    = process.env.NEXT_PUBLIC_SITE_URL!;
 
-// TODO: verificar firma HMAC de Tilopay cuando documenten el header exacto.
+// TODO: verificar firma HMAC de Tilopay (confirmar header con su soporte)
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,28 +18,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "missing_order_number" }, { status: 400 });
     }
 
-    // Buscar el registro pending que creamos antes de redirigir a Tilopay
+    // Buscar el registro pending creado antes de redirigir a Tilopay
     const searchRes = await fetch(
       `${CMS_URL}/api/donations?where[orderNumber][equals]=${encodeURIComponent(orderNumber)}&limit=1&depth=0`,
       { headers: { Authorization: `API-Key ${PAYLOAD_KEY}` } }
     );
-    const searchData = await searchRes.json();
-    const donation = searchData?.docs?.[0];
+    const searchData  = await searchRes.json();
+    const donation    = searchData?.docs?.[0];
 
     if (!donation) {
-      console.error("[tilopay webhook] Donation not found for orderNumber:", orderNumber);
+      console.error("[tilopay webhook] Donation not found:", orderNumber);
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
 
     const newStatus = mapTilopayStatus(status);
 
-    // Actualizar registro con los IDs de Tilopay y el estado final
+    // Actualizar registro con IDs de Tilopay y estado final
     await fetch(`${CMS_URL}/api/donations/${donation.id}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `API-Key ${PAYLOAD_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `API-Key ${PAYLOAD_KEY}` },
       body: JSON.stringify({
         status:                newStatus,
         tilopayTransactionId:  transactionId  ?? undefined,
@@ -44,15 +44,29 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    // Enviar email de confirmación ahora que tenemos el email guardado desde el form
+    // Enviar email de confirmación usando el email ya almacenado desde el form
     if (newStatus === "active" || newStatus === "completed") {
-      await sendConfirmationEmail({
-        email:             donation.email,
-        name:              donation.name,
-        amount:            donation.amount,
-        isRecurring:       donation.type === "recurring",
-        frequency:         donation.frequency,
-        cancellationToken: donation.cancellationToken,
+      const isRecurring = donation.type === "recurring";
+      const subject     = isRecurring
+        ? `Suscripción activa — B/. ${Number(donation.amount).toFixed(2)} ${FREQ_LABELS[donation.frequency] ?? ""}`
+        : `Gracias por tu donación — B/. ${Number(donation.amount).toFixed(2)}`;
+
+      await sendEmail({
+        to:      donation.email,
+        subject,
+        react: isRecurring
+          ? SubscriptionConfirmation({
+              name:            donation.name,
+              amount:          Number(donation.amount),
+              frequency:       donation.frequency,
+              orderNumber:     donation.orderNumber,
+              cancellationUrl: `${SITE_URL}/donaciones/gestionar?token=${donation.cancellationToken}`,
+            })
+          : DonationConfirmation({
+              name:        donation.name,
+              amount:      Number(donation.amount),
+              orderNumber: donation.orderNumber,
+            }),
       });
     }
 
@@ -67,11 +81,8 @@ export async function POST(req: NextRequest) {
 
 function mapTilopayStatus(status: string): string {
   const map: Record<string, string> = {
-    approved:  "active",
-    completed: "completed",
-    cancelled: "cancelled",
-    failed:    "failed",
-    pending:   "pending",
+    approved: "active", completed: "completed",
+    cancelled: "cancelled", failed: "failed", pending: "pending",
   };
   return map[status?.toLowerCase()] ?? "pending";
 }
@@ -79,37 +90,3 @@ function mapTilopayStatus(status: string): string {
 const FREQ_LABELS: Record<string, string> = {
   weekly: "semanal", monthly: "mensual", yearly: "anual",
 };
-
-async function sendConfirmationEmail({
-  email, name, amount, isRecurring, frequency, cancellationToken,
-}: {
-  email: string;
-  name: string;
-  amount: number;
-  isRecurring: boolean;
-  frequency?: string;
-  cancellationToken: string;
-}) {
-  const cancelUrl  = `${SITE_URL}/donaciones/gestionar?token=${cancellationToken}`;
-  const freqLabel  = FREQ_LABELS[frequency ?? ""] ?? "";
-  const amountFmt  = `B/. ${Number(amount).toFixed(2)}`;
-
-  // TODO: reemplazar con Resend u otro proveedor de email
-  //
-  // await resend.emails.send({
-  //   from:    "Roca de Vida Panamá <noreply@rocadevidapanama.com>",
-  //   to:      email,
-  //   subject: isRecurring
-  //     ? `Suscripción activa — ${amountFmt} ${freqLabel}`
-  //     : `Gracias por tu donación — ${amountFmt}`,
-  //   html: `
-  //     <p>Hola ${name},</p>
-  //     <p>Recibimos tu ${isRecurring ? `donación recurrente de ${amountFmt} ${freqLabel}` : `donación de ${amountFmt}`}. ¡Gracias!</p>
-  //     ${isRecurring ? `<p>Para gestionar o cancelar tu suscripción en cualquier momento, usa este link:</p>
-  //     <a href="${cancelUrl}">${cancelUrl}</a>` : ""}
-  //     <p>— Equipo Roca de Vida Panamá</p>
-  //   `,
-  // });
-
-  console.info("[tilopay] Email stub →", { to: email, amountFmt, isRecurring, freqLabel, cancelUrl });
-}
