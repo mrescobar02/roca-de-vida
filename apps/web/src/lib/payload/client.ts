@@ -111,7 +111,7 @@ export interface CmsSermon {
   series?: string;
   scripture?: string;
   duration?: string;
-  description?: string;
+  description?: unknown;
   thumbnail?: CmsMedia;
   status: string;
 }

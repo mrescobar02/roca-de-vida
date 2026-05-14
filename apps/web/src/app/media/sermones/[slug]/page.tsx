@@ -17,7 +17,7 @@ import {
   isYoutubeId,
   type SermonProps,
 } from "@/lib/youtube/api";
-import { getSermons, getSermonBySlug } from "@/lib/payload/client";
+import { getSermons, getSermonBySlug, richTextToPlain } from "@/lib/payload/client";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -60,7 +60,9 @@ async function getSermonData(slug: string): Promise<SermonData | null> {
       series: sermon.series,
       scripture: sermon.scripture,
       duration: sermon.duration,
-      description: sermon.description,
+      description: typeof sermon.description === "string"
+        ? sermon.description
+        : richTextToPlain(sermon.description),
       thumbnail: sermon.thumbnail
         ? { url: sermon.thumbnail.url, alt: sermon.thumbnail.alt ?? sermon.title }
         : undefined,
