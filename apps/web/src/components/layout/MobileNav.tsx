@@ -86,6 +86,7 @@ export function MobileNav({ isOpen, onClose, navItems }: MobileNavProps) {
           {/* Panel del menú */}
           <motion.nav
             key="panel"
+            id="mobile-menu"
             variants={menuVariants}
             initial="closed"
             animate="open"
@@ -203,7 +204,10 @@ export function MobileNav({ isOpen, onClose, navItems }: MobileNavProps) {
             </motion.ul>
 
             {/* Footer del panel — CTAs y redes */}
-            <div className="px-6 py-6 border-t border-border flex flex-col gap-4">
+            <div
+              className="px-6 pt-6 border-t border-border flex flex-col gap-4"
+              style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+            >
               <div className="flex gap-3">
                 <Link
                   href="/donaciones"

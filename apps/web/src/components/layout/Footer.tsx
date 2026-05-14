@@ -38,7 +38,7 @@ export function Footer() {
     >
       {/* ─── Top: columnas de links ─────────────────────────────────── */}
       <div className="container-main section-py-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 lg:gap-8">
 
           {/* Col 1 — Identidad */}
           <div className="flex flex-col gap-6 lg:pr-8">
@@ -77,38 +77,41 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Cols 2–4 — Grupos de links */}
-          {FOOTER_COLUMNS.map((col) => (
-            <nav key={col.heading} aria-label={col.heading}>
-              <p className="text-label text-gold mb-5">{col.heading}</p>
-              <ul className="flex flex-col gap-3" role="list">
-                {col.links.map((link) => {
-                  const isExternal = link.href.startsWith("http");
-                  return (
-                    <li key={link.label} role="listitem">
-                      {isExternal ? (
-                        <a
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-body text-[0.9rem] text-text-secondary hover:text-gold transition-colors duration-150"
-                        >
-                          {link.label}
-                        </a>
-                      ) : (
-                        <Link
-                          href={link.href}
-                          className="font-body text-[0.9rem] text-text-secondary hover:text-gold transition-colors duration-150"
-                        >
-                          {link.label}
-                        </Link>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          ))}
+          {/* Cols 2–4 — Grupos de links en grid 2-col mobile, 3-col desktop */}
+          <div className="lg:col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-8">
+            {FOOTER_COLUMNS.map((col) => (
+              <nav key={col.heading} aria-label={col.heading}>
+                <p className="text-label text-gold mb-5">{col.heading}</p>
+                <ul className="flex flex-col gap-3" role="list">
+                  {col.links.map((link) => {
+                    const isExternal = link.href.startsWith("http");
+                    return (
+                      <li key={link.label} role="listitem">
+                        {isExternal ? (
+                          <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-body text-[0.9rem] text-text-secondary hover:text-gold transition-colors duration-150"
+                          >
+                            {link.label}
+                          </a>
+                        ) : (
+                          <Link
+                            href={link.href}
+                            className="font-body text-[0.9rem] text-text-secondary hover:text-gold transition-colors duration-150"
+                          >
+                            {link.label}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            ))}
+          </div>
+
         </div>
       </div>
 

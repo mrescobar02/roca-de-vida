@@ -190,11 +190,27 @@ export function HeroSection({
 
       {/* Service Times Strip */}
       <div className="relative z-10">
-        <div
-          className="bg-bg-surface/80 backdrop-blur-md border-t border-border"
-        >
+        <div className="bg-bg-surface/80 backdrop-blur-md border-t border-border">
           <div className="container-main">
-            <div className="flex flex-wrap items-center gap-0 divide-x divide-border">
+
+            {/* Mobile: una sola línea compacta */}
+            <div className="sm:hidden flex items-center justify-between py-3 gap-4">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-label text-gold text-[0.5625rem]">SERVICIOS</span>
+                <span className="font-body text-[0.8125rem] text-text-secondary truncate">
+                  {serviceSchedule.map((s) => `${s.day.slice(0, 3)} ${s.time}`).join(" · ")}
+                </span>
+              </div>
+              <Link
+                href="/contacto"
+                className="font-display font-700 text-[0.8125rem] text-gold hover:text-gold-muted transition-colors shrink-0"
+              >
+                Visítanos →
+              </Link>
+            </div>
+
+            {/* Desktop: divided strip */}
+            <div className="hidden sm:flex items-center gap-0 divide-x divide-border">
               <span className="text-label text-gold pr-6 py-4 text-[0.6875rem] shrink-0">
                 HORARIOS
               </span>
@@ -210,7 +226,7 @@ export function HeroSection({
                   )}
                 </div>
               ))}
-              <div className="ml-auto pl-6 py-4 hidden sm:block">
+              <div className="ml-auto pl-6 py-4">
                 <Link
                   href="/contacto"
                   className="font-display font-700 text-[0.8125rem] text-gold hover:text-gold-muted transition-colors"
@@ -219,6 +235,7 @@ export function HeroSection({
                 </Link>
               </div>
             </div>
+
           </div>
         </div>
       </div>

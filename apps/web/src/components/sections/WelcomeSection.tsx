@@ -33,8 +33,8 @@ export function WelcomeSection({
     <section className="bg-bg-base overflow-hidden">
       <Container section className="grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
 
-        {/* Imagen */}
-        <AnimateIn variant="fadeRight" amount={0.2}>
+        {/* Imagen — debajo del texto en mobile, izquierda en desktop */}
+        <AnimateIn variant="fadeRight" amount={0.2} className="order-2 md:order-1">
           <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-bg-raised">
             <Image
               src={image.url}
@@ -51,8 +51,8 @@ export function WelcomeSection({
           </div>
         </AnimateIn>
 
-        {/* Texto */}
-        <AnimateIn variant="fadeLeft" amount={0.2} className="flex flex-col gap-6">
+        {/* Texto — primero en mobile, derecha en desktop */}
+        <AnimateIn variant="fadeLeft" amount={0.2} className="flex flex-col gap-6 order-1 md:order-2">
           {/* Línea dorada + overline */}
           <div className="flex items-center gap-3">
             <div className="gold-line shrink-0" aria-hidden />

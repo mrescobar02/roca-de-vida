@@ -205,8 +205,9 @@ export function PrayerWidget() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.5, duration: 0.5, ease: EASE }}
         aria-label="Pedir oración"
+        style={{ bottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
         className={cn(
-          "fixed bottom-6 right-6 z-40",
+          "fixed right-6 z-40",
           "flex items-center gap-2.5 px-4 py-3 rounded-full shadow-lg shadow-black/40",
           "bg-gold text-bg-base",
           "font-display font-700 text-[0.875rem] tracking-[0.03em]",

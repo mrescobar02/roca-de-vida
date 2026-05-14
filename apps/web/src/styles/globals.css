@@ -344,6 +344,15 @@
     100% { transform: translateY(300%); }
   }
 
+  /* Ocultar scrollbar — para strips/sliders horizontales */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Shimmer — loading skeleton */
   .animate-shimmer {
     background: linear-gradient(

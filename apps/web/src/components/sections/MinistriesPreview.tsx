@@ -43,7 +43,7 @@ export function MinistriesPreview({ ministries }: MinistriesPreviewProps) {
         </AnimateIn>
 
         <StaggerContainer
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4"
           staggerDelay={0.07}
         >
           {visible.map((ministry) => (
