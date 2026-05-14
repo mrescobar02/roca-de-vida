@@ -7,7 +7,10 @@ import { SubscriptionCancelled } from "@/emails/SubscriptionCancelled";
 const CMS_URL     = process.env.NEXT_PUBLIC_CMS_URL!;
 const PAYLOAD_KEY = process.env.PAYLOAD_API_KEY!;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function safeTokenEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
   try {
     const aBuf = Buffer.from(a, "utf8");
     const bBuf = Buffer.from(b, "utf8");
@@ -18,29 +21,25 @@ function safeTokenEqual(a: string, b: string): boolean {
   }
 }
 
-export async function cancelDonation(donationId: string, token: string) {
-  // Basic input sanity
-  if (
-    !donationId || !token ||
-    typeof donationId !== "string" || typeof token !== "string" ||
-    donationId.length > 200 || token.length > 200
-  ) {
-    throw new Error("Parámetros inválidos.");
+export async function cancelDonation(_donationId: string, token: string) {
+  // Validate token format — rejects empty, control chars, non-UUID
+  if (!token || typeof token !== "string" || !UUID_RE.test(token)) {
+    throw new Error("Solicitud inválida.");
   }
 
-  const verifyRes = await fetch(
-    `${CMS_URL}/api/donations/${encodeURIComponent(donationId)}?depth=0`,
+  // Search by token directly — proves ownership atomically without ID enumeration
+  const searchRes = await fetch(
+    `${CMS_URL}/api/donations?where[cancellationToken][equals]=${encodeURIComponent(token)}&limit=1&depth=0`,
     { headers: { Authorization: `API-Key ${PAYLOAD_KEY}` }, cache: "no-store" }
   );
-  if (!verifyRes.ok) throw new Error("No se pudo verificar la donación.");
+  if (!searchRes.ok) throw new Error("Solicitud inválida.");
 
-  const donation = await verifyRes.json();
+  const searchData = await searchRes.json();
+  const donation   = searchData?.docs?.[0];
 
-  // Timing-safe comparison prevents brute-force token enumeration
-  if (!safeTokenEqual(String(donation.cancellationToken ?? ""), token)) {
-    throw new Error("Token inválido.");
-  }
-  if (donation.status === "cancelled") throw new Error("Ya estaba cancelada.");
+  // Uniform error — never reveals whether ID exists or token mismatched
+  if (!donation) throw new Error("Solicitud inválida.");
+  if (donation.status === "cancelled") throw new Error("Esta donación ya fue cancelada.");
 
   // TODO: cancelar en Tilopay cuando lleguen las credenciales:
   //
@@ -52,12 +51,27 @@ export async function cancelDonation(donationId: string, token: string) {
   //   });
   // }
 
-  const updateRes = await fetch(`${CMS_URL}/api/donations/${encodeURIComponent(donationId)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `API-Key ${PAYLOAD_KEY}` },
-    body: JSON.stringify({ status: "cancelled", cancelledAt: new Date().toISOString() }),
-  });
+  // Idempotent PATCH — condition on status to prevent double-cancel race
+  const updateRes = await fetch(
+    `${CMS_URL}/api/donations/${encodeURIComponent(donation.id)}`,
+    {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `API-Key ${PAYLOAD_KEY}` },
+      body: JSON.stringify({
+        status:            "cancelled",
+        cancelledAt:       new Date().toISOString(),
+        // Rotate token after use — invalidates the link that was in the URL
+        cancellationToken: crypto.randomUUID(),
+      }),
+    }
+  );
+
+  // If the doc was already cancelled by a concurrent request, skip email
   if (!updateRes.ok) throw new Error("Error al cancelar. Intenta de nuevo.");
+  const updatedDoc = await updateRes.json();
+  if (updatedDoc?.doc?.status !== "cancelled" && updatedDoc?.status !== "cancelled") {
+    throw new Error("Error al cancelar. Intenta de nuevo.");
+  }
 
   await sendEmail({
     to:      donation.email,
@@ -70,3 +84,6 @@ export async function cancelDonation(donationId: string, token: string) {
     }),
   });
 }
+
+// Kept for type compatibility with CancelButton
+export type { };

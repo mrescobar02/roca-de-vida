@@ -45,3 +45,9 @@ pnpm-debug.log*
 
 # Media (local uploads)
 apps/cms/uploads
+
+# Sensitive files — never commit these
+recovery-codes*.txt
+*-recovery-codes.txt
+*.pem
+*.p12

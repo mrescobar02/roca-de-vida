@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 import { Heart, AlertTriangle, CheckCircle } from "lucide-react";
 import { Container } from "@/components/common/Container";
 import { CancelButton } from "./CancelButton";

@@ -7,8 +7,14 @@ const PAYLOAD_KEY = process.env.PAYLOAD_API_KEY!;
 
 // ── Schemas compartidos ────────────────────────────────────────────────────────
 
-const nameSchema    = z.string().min(2, "Nombre muy corto").max(100).trim();
-const emailSchema   = z.string().email("Email inválido").max(255).trim();
+// Strip Unicode bidi/control chars that can subvert email display (RTL override, zero-width)
+const nameSchema = z.string()
+  .min(2, "Nombre muy corto")
+  .max(100)
+  .trim()
+  .transform((s) => s.replace(/[​-‏‪-‮⁦-⁩]/g, "").trim())
+  .pipe(z.string().min(2, "Nombre muy corto"));
+const emailSchema = z.string().email("Email inválido").max(255).trim();
 const optEmailSchema = z.preprocess(
   (v) => String(v ?? "").trim() || undefined,
   z.string().email("Email inválido").max(255).optional()

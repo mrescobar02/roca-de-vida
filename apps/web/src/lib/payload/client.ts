@@ -1,3 +1,5 @@
+import "server-only";
+
 const CMS_URL = process.env.NEXT_PUBLIC_CMS_URL || "http://localhost:3001";
 const API_KEY = process.env.PAYLOAD_API_KEY;
 

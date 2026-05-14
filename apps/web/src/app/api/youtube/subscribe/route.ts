@@ -23,12 +23,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const channelId = process.env.YOUTUBE_CHANNEL_ID;
-  const baseUrl   = process.env.NEXT_PUBLIC_SITE_URL;
+  const channelId      = process.env.YOUTUBE_CHANNEL_ID;
+  const baseUrl        = process.env.NEXT_PUBLIC_SITE_URL;
+  const hubSecret      = process.env.PUBSUBHUBBUB_SECRET;
 
-  if (!channelId || !baseUrl) {
+  if (!channelId || !baseUrl || !hubSecret) {
     return NextResponse.json(
-      { error: "Missing YOUTUBE_CHANNEL_ID or NEXT_PUBLIC_SITE_URL" },
+      { error: "Missing YOUTUBE_CHANNEL_ID, NEXT_PUBLIC_SITE_URL, or PUBSUBHUBBUB_SECRET" },
       { status: 400 }
     );
   }
@@ -37,11 +38,12 @@ export async function GET(req: NextRequest) {
   const topicUrl    = `https://www.youtube.com/xml/feeds/videos.xml?channel_id=${channelId}`;
 
   const body = new URLSearchParams({
-    "hub.mode":           "subscribe",
-    "hub.topic":          topicUrl,
-    "hub.callback":       callbackUrl,
-    "hub.verify":         "async",
-    "hub.lease_seconds":  "432000",
+    "hub.mode":          "subscribe",
+    "hub.topic":         topicUrl,
+    "hub.callback":      callbackUrl,
+    "hub.verify":        "async",
+    "hub.secret":        hubSecret,
+    "hub.lease_seconds": "432000",
   });
 
   const res = await fetch("https://pubsubhubbub.appspot.com/subscribe", {

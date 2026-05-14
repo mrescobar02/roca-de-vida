@@ -32,6 +32,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
+  // Allowlist prevents cache stampede if secret is compromised
+  const STATIC = new Set(["/", "/contacto", "/donaciones", "/nosotros", "/ministerios", "/grupos", "/eventos", "/media/sermones", "/media/podcast"]);
+  const DYNAMIC = /^\/(eventos|ministerios|grupos|sermones)\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  if (!STATIC.has(path) && !DYNAMIC.test(path)) {
+    return NextResponse.json({ error: "Path not in allowlist" }, { status: 400 });
+  }
+
   revalidatePath(path);
 
   return NextResponse.json({ revalidated: true, path });

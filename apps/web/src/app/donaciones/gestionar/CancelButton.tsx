@@ -17,6 +17,13 @@ export function CancelButton({ donationId, token }: CancelButtonProps) {
   const [pending, setPending]       = React.useState(false);
   const [error, setError]           = React.useState<string | null>(null);
 
+  // Remove token from URL immediately to prevent Referer leakage
+  React.useEffect(() => {
+    if (window.location.search.includes("token=")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const handleCancel = async () => {
     setPending(true);
     setError(null);
