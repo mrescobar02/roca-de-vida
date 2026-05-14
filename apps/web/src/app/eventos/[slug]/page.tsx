@@ -18,11 +18,15 @@ import {
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const [upcoming, past] = await Promise.all([
-    getUpcomingEvents(100),
-    getPastEvents(100),
-  ]);
-  return [...upcoming.docs, ...past.docs].map((e) => ({ slug: e.slug }));
+  try {
+    const [upcoming, past] = await Promise.all([
+      getUpcomingEvents(100),
+      getPastEvents(100),
+    ]);
+    return [...upcoming.docs, ...past.docs].map((e) => ({ slug: e.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -38,6 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export const revalidate = 60;
+export const dynamicParams = true;
 
 export default async function EventPage({ params }: PageProps) {
   const { slug } = await params;

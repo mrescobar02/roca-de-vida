@@ -20,6 +20,7 @@ import {
 import { getSermons, getSermonBySlug } from "@/lib/payload/client";
 
 export const revalidate = 3600;
+export const dynamicParams = true;
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -38,31 +39,35 @@ type SermonData = {
 };
 
 async function getSermonData(slug: string): Promise<SermonData | null> {
-  if (isYoutubeId(slug)) {
-    const video = await getVideoById(slug);
-    if (!video) return null;
-    const props = toSermonProps(video);
-    return { ...props, description: video.description.slice(0, 500) };
+  try {
+    if (isYoutubeId(slug)) {
+      const video = await getVideoById(slug);
+      if (!video) return null;
+      const props = toSermonProps(video);
+      return { ...props, description: video.description.slice(0, 500) };
+    }
+
+    const result = await getSermonBySlug(slug);
+    const sermon = result.docs[0];
+    if (!sermon) return null;
+
+    return {
+      title: sermon.title,
+      slug: sermon.slug,
+      youtubeUrl: sermon.youtubeUrl ?? "",
+      pastor: { name: sermon.pastor?.name ?? "Roca de Vida" },
+      date: sermon.date,
+      series: sermon.series,
+      scripture: sermon.scripture,
+      duration: sermon.duration,
+      description: sermon.description,
+      thumbnail: sermon.thumbnail
+        ? { url: sermon.thumbnail.url, alt: sermon.thumbnail.alt ?? sermon.title }
+        : undefined,
+    };
+  } catch {
+    return null;
   }
-
-  const result = await getSermonBySlug(slug);
-  const sermon = result.docs[0];
-  if (!sermon) return null;
-
-  return {
-    title: sermon.title,
-    slug: sermon.slug,
-    youtubeUrl: sermon.youtubeUrl,
-    pastor: { name: sermon.pastor?.name ?? "Roca de Vida" },
-    date: sermon.date,
-    series: sermon.series,
-    scripture: sermon.scripture,
-    duration: sermon.duration,
-    description: sermon.description,
-    thumbnail: sermon.thumbnail
-      ? { url: sermon.thumbnail.url, alt: sermon.thumbnail.alt ?? sermon.title }
-      : undefined,
-  };
 }
 
 async function getRelatedSermons(current: SermonData): Promise<SermonProps[]> {
@@ -93,13 +98,14 @@ async function getRelatedSermons(current: SermonData): Promise<SermonProps[]> {
 }
 
 export async function generateStaticParams() {
-  const [ytVideos, cmsResult] = await Promise.all([
-    getLatestSermons(20),
-    getSermons({ limit: 50 }),
-  ]);
-  const ytParams = ytVideos.map((v) => ({ slug: v.videoId }));
-  const cmsParams = cmsResult.docs.map((s) => ({ slug: s.slug }));
-  return [...ytParams, ...cmsParams];
+  // Only prerender YouTube slugs at build time.
+  // CMS sermon slugs are rendered on first request and cached (ISR).
+  try {
+    const ytVideos = await getLatestSermons(20);
+    return ytVideos.map((v) => ({ slug: v.videoId }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

@@ -22,8 +22,12 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  const result = await getCellGroups();
-  return result.docs.map((g) => ({ slug: g.slug }));
+  try {
+    const result = await getCellGroups();
+    return result.docs.map((g) => ({ slug: g.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -38,6 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export const revalidate = 300;
+export const dynamicParams = true;
 
 export default async function GroupPage({ params }: PageProps) {
   const { slug } = await params;

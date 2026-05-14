@@ -12,8 +12,12 @@ import { getGalleries, getGalleryBySlug } from "@/lib/payload/client";
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const result = await getGalleries();
-  return result.docs.map((g) => ({ slug: g.slug }));
+  try {
+    const result = await getGalleries();
+    return result.docs.map((g) => ({ slug: g.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -28,6 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export const revalidate = 300;
+export const dynamicParams = true;
 
 export default async function GalleryPage({ params }: PageProps) {
   const { slug } = await params;

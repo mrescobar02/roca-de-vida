@@ -32,8 +32,12 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  const result = await getMinistries();
-  return result.docs.map((m) => ({ slug: m.slug }));
+  try {
+    const result = await getMinistries();
+    return result.docs.map((m) => ({ slug: m.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -48,6 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export const revalidate = 300;
+export const dynamicParams = true;
 
 export default async function MinistryPage({ params }: PageProps) {
   const { slug } = await params;
