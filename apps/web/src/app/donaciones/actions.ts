@@ -1,38 +1,46 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 const CMS_URL     = process.env.NEXT_PUBLIC_CMS_URL!;
 const PAYLOAD_KEY = process.env.PAYLOAD_API_KEY!;
-const SITE_URL    = process.env.NEXT_PUBLIC_SITE_URL!;
 
-// Env vars de Tilopay (cuando lleguen las credenciales):
-//   TILOPAY_API_KEY, TILOPAY_ACCOUNT_ID, TILOPAY_KEY_ID
-// Docs: https://tilopay.com/documentacion/sdk  |  sac@tilopay.com
-
-const FREQUENCY_PERIODS: Record<string, string> = {
-  weekly: "week", monthly: "month", yearly: "year",
-};
+const DonationSchema = z.object({
+  name:      z.string().min(2, "Nombre muy corto").max(100).trim(),
+  email:     z.string().email("Email inválido").max(255).trim(),
+  amount:    z.number().positive("Monto inválido").max(10000, "Monto máximo $10,000").finite(),
+  recurring: z.boolean(),
+  frequency: z.enum(["weekly", "monthly", "yearly"]).optional(),
+});
 
 export async function initTilopayDonation(formData: FormData) {
-  const name        = String(formData.get("name") ?? "").trim();
-  const email       = String(formData.get("email") ?? "").trim();
-  const amount      = Number(formData.get("amount"));
-  const customAmt   = Number(formData.get("customAmount"));
-  const recurring   = formData.get("recurring") === "true";
-  const frequency   = String(formData.get("frequency") ?? "");
+  const rawAmount  = Number(formData.get("amount"));
+  const customAmt  = Number(formData.get("customAmount"));
+  const finalRaw   = rawAmount > 0 ? rawAmount : customAmt;
+  // Round to 2 decimal places to prevent floating-point abuse
+  const finalAmount = Math.round(finalRaw * 100) / 100;
 
-  const finalAmount = amount > 0 ? amount : customAmt;
-  if (!finalAmount || finalAmount < 1) throw new Error("Monto inválido.");
-  if (!email) throw new Error("El correo es requerido.");
+  const recurring = formData.get("recurring") === "true";
+  const frequency = String(formData.get("frequency") ?? "");
 
-  // Identificadores únicos generados antes de redirigir
-  const orderNumber        = `RDV-${Date.now()}`;
-  const cancellationToken  = crypto.randomUUID();
+  const parsed = DonationSchema.safeParse({
+    name:      formData.get("name"),
+    email:     formData.get("email"),
+    amount:    finalAmount,
+    recurring,
+    frequency: recurring && frequency ? frequency : undefined,
+  });
+  if (!parsed.success) throw new Error("Datos inválidos. Revisa el formulario.");
+
+  const { name, email, amount, frequency: freq } = parsed.data;
+
+  // Unpredictable order number — avoids timestamp-based enumeration
+  const orderNumber       = `RDV-${crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`;
+  const cancellationToken = crypto.randomUUID();
 
   // ── 1. Crear registro pending en el CMS ───────────────────────────────────
-  // Así tenemos el email y el cancellationToken listos cuando llegue el webhook.
-  await fetch(`${CMS_URL}/api/donations`, {
+  const cmsRes = await fetch(`${CMS_URL}/api/donations`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -41,36 +49,22 @@ export async function initTilopayDonation(formData: FormData) {
     body: JSON.stringify({
       name,
       email,
-      amount:             finalAmount,
-      currency:           "USD",
-      type:               recurring ? "recurring" : "one-time",
-      frequency:          recurring && frequency ? frequency : undefined,
-      status:             "pending",
+      amount,
+      currency:  "USD",
+      type:      recurring ? "recurring" : "one-time",
+      frequency: freq,
+      status:    "pending",
       orderNumber,
       cancellationToken,
     }),
   });
+  if (!cmsRes.ok) {
+    console.error("[donations] CMS error:", cmsRes.status);
+    throw new Error("Error al procesar la donación. Intenta de nuevo.");
+  }
 
   // ── 2. Redirigir a Tilopay ────────────────────────────────────────────────
   // Descomentar y ajustar cuando lleguen las credenciales:
-  //
-  // const baseParams = {
-  //   apiuser:     process.env.TILOPAY_ACCOUNT_ID!,
-  //   hash:        process.env.TILOPAY_KEY_ID!,
-  //   amount:      finalAmount.toFixed(2),
-  //   currency:    "USD",
-  //   orderNumber,
-  //   redirect:    `${SITE_URL}/donaciones/gracias`,
-  //   callback:    `${SITE_URL}/api/webhooks/tilopay`,
-  //   email,                          // pre-llena el campo de email en Tilopay
-  //   name,
-  // };
-  //
-  // const subscriptionParams = recurring && frequency ? {
-  //   subscription:  "1",
-  //   billPeriod:    FREQUENCY_PERIODS[frequency] ?? "month",
-  //   billFrequency: "1",
-  // } : {};
   //
   // const res = await fetch("https://app.tilopay.com/api/v1/processTransaction", {
   //   method: "POST",
@@ -78,16 +72,26 @@ export async function initTilopayDonation(formData: FormData) {
   //     Authorization: `Bearer ${process.env.TILOPAY_API_KEY}`,
   //     "Content-Type": "application/x-www-form-urlencoded",
   //   },
-  //   body: new URLSearchParams({ ...baseParams, ...subscriptionParams }),
+  //   body: new URLSearchParams({
+  //     apiuser: process.env.TILOPAY_ACCOUNT_ID!,
+  //     hash:    process.env.TILOPAY_KEY_ID!,
+  //     amount:  amount.toFixed(2),
+  //     currency: "USD",
+  //     orderNumber,
+  //     redirect: `${process.env.NEXT_PUBLIC_SITE_URL}/donaciones/gracias`,
+  //     callback: `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhooks/tilopay`,
+  //     email,
+  //     name,
+  //     ...(recurring && freq ? { subscription: "1", billPeriod: FREQ_PERIODS[freq] ?? "month", billFrequency: "1" } : {}),
+  //   }),
   // });
   // const { redirect: redirectUrl } = await res.json();
   // redirect(redirectUrl);
 
-  // Stub temporal mientras llegan las credenciales
   const params = new URLSearchParams({
-    monto:     String(finalAmount),
-    tipo:      recurring ? "recurrente" : "unica",
-    ...(recurring && frequency ? { frecuencia: frequency } : {}),
+    monto: String(amount),
+    tipo:  recurring ? "recurrente" : "unica",
+    ...(recurring && freq ? { frecuencia: freq } : {}),
   });
   redirect(`/donaciones/pendiente?${params}`);
 }

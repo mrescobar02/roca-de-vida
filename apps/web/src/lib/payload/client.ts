@@ -6,6 +6,13 @@ interface FetchOptions {
   revalidate?: number;
 }
 
+// Prevents unexpected characters from reaching CMS query params
+function assertSlug(slug: string): void {
+  if (!/^[a-z0-9]+(?:[_-][a-z0-9]+)*$/.test(slug)) {
+    throw new Error(`Invalid slug format: "${slug}"`);
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CmsMedia {
@@ -199,6 +206,7 @@ export async function getMinistries(options?: FetchOptions) {
 }
 
 export async function getMinistryBySlug(slug: string, options?: FetchOptions) {
+  assertSlug(slug);
   return fetchFromCMS<PayloadList<CmsMinistry>>(
     "ministries",
     {
@@ -253,6 +261,7 @@ export async function getSermons(
 }
 
 export async function getSermonBySlug(slug: string, options?: FetchOptions) {
+  assertSlug(slug);
   return fetchFromCMS<PayloadList<CmsSermon>>(
     "sermons",
     {
@@ -303,6 +312,7 @@ export async function getPastEvents(limit = 12, options?: FetchOptions) {
 }
 
 export async function getEventBySlug(slug: string, options?: FetchOptions) {
+  assertSlug(slug);
   return fetchFromCMS<PayloadList<CmsEvent>>(
     "events",
     {
@@ -330,6 +340,7 @@ export async function getCellGroups(options?: FetchOptions) {
 }
 
 export async function getCellGroupBySlug(slug: string, options?: FetchOptions) {
+  assertSlug(slug);
   return fetchFromCMS<PayloadList<CmsCellGroup>>(
     "cell-groups",
     {
@@ -374,6 +385,7 @@ export async function getGalleries(options?: FetchOptions) {
 }
 
 export async function getGalleryBySlug(slug: string, options?: FetchOptions) {
+  assertSlug(slug);
   return fetchFromCMS<PayloadList<CmsGallery>>(
     "galleries",
     {
