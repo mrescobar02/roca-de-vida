@@ -8,6 +8,7 @@ import { allCountries } from "country-telephone-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { submitPrayerRequest } from "@/app/actions/forms";
 
 type FormState = "idle" | "submitting" | "success";
 
@@ -188,9 +189,12 @@ export function PrayerWidget() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setState("submitting");
-    // TODO: POST /api/forms/prayer-request
-    await new Promise((r) => setTimeout(r, 1200));
-    setState("success");
+    try {
+      await submitPrayerRequest(new FormData(e.currentTarget));
+      setState("success");
+    } catch {
+      setState("idle");
+    }
   };
 
   return (

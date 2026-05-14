@@ -56,13 +56,16 @@ export const dynamicParams = true;
 
 export default async function MinistryPage({ params }: PageProps) {
   const { slug } = await params;
-  const [ministryResult, eventsResult] = await Promise.all([
+  const [ministryResult, eventsResult, ministriesResult] = await Promise.all([
     getMinistryBySlug(slug),
     getUpcomingEvents(10),
+    getMinistries(),
   ]);
 
   const ministry = ministryResult.docs[0];
   if (!ministry) notFound();
+
+  const allMinistries = ministriesResult.docs.map((m) => ({ id: m.id, name: m.name }));
 
   const accent = MINISTRY_ACCENTS[slug] ?? "var(--color-gold)";
   const ministryEvents = eventsResult.docs
@@ -260,8 +263,8 @@ export default async function MinistryPage({ params }: PageProps) {
           </AnimateIn>
           <AnimateIn variant="fadeUp" delay={0.1}>
             <MinistryInterestForm
-              ministryName={ministry.name}
-              ministrySlug={ministry.slug}
+              ministries={allMinistries}
+              defaultMinistryId={ministry.id}
             />
           </AnimateIn>
         </Container>

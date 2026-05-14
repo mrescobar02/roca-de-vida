@@ -46,9 +46,14 @@ export const dynamicParams = true;
 
 export default async function GroupPage({ params }: PageProps) {
   const { slug } = await params;
-  const result = await getCellGroupBySlug(slug);
+  const [result, allGroupsResult] = await Promise.all([
+    getCellGroupBySlug(slug),
+    getCellGroups(),
+  ]);
   const group = result.docs[0];
   if (!group) notFound();
+
+  const allGroups = allGroupsResult.docs.map((g) => ({ id: g.id, name: g.name, district: g.district }));
 
   const bio = richTextToPlain(group.description);
   const districtLabel = DISTRICT_LABELS[group.district] ?? group.district;
@@ -199,7 +204,7 @@ export default async function GroupPage({ params }: PageProps) {
                       Completa el formulario y {leaderName || "el líder"} te contactará.
                     </p>
                   </div>
-                  <JoinGroupForm groupName={group.name} groupSlug={group.slug} />
+                  <JoinGroupForm groups={allGroups} defaultGroupId={group.id} />
                 </div>
               )}
             </div>

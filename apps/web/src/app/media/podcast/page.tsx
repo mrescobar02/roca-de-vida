@@ -5,22 +5,23 @@ import { Container } from "@/components/common/Container";
 import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { cn } from "@rdv/utils";
+import { getSiteSettings } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Podcast | Roca de Vida Panamá",
   description: "Escucha el podcast de Roca de Vida Panamá en Spotify y Apple Podcasts.",
 };
 
-// Mock — reemplazar con getPodcastSettings() de Payload
-const PODCAST = {
+const PODCAST_BASE = {
   title: "RDV Podcast",
   description: "Mensajes, reflexiones y conversaciones para tu semana. Escúchanos donde sea que estés.",
-  spotifyEmbedUrl: "", // TODO: URL del embed de Spotify cuando el podcast esté activo
-  spotifyUrl: "https://open.spotify.com",
+  spotifyEmbedUrl: "",
   appleUrl: "https://podcasts.apple.com",
   youtubeUrl: "https://youtube.com/@rocadevidapanama",
-  isActive: false, // Cambiar a true cuando el podcast esté publicado
+  isActive: false,
 };
+
+export const revalidate = 300;
 
 // Episodios mock — reemplazar con lista real o feed de Spotify
 const EPISODES = [
@@ -31,13 +32,22 @@ const EPISODES = [
   { num: 1, title: "Bienvenidos a RDV Podcast", duration: "18 min", date: "2025-04-08" },
 ];
 
-const PLATFORMS = [
-  { name: "Spotify", url: PODCAST.spotifyUrl, color: "#1DB954" },
-  { name: "Apple Podcasts", url: PODCAST.appleUrl, color: "#FC3C44" },
-  { name: "YouTube", url: PODCAST.youtubeUrl, color: "#FF0000" },
-];
+export default async function PodcastPage() {
+  const settings = await getSiteSettings().catch(() => null) as {
+    social?: { spotify?: string };
+  } | null;
 
-export default function PodcastPage() {
+  const PODCAST = {
+    ...PODCAST_BASE,
+    spotifyUrl: settings?.social?.spotify ?? "https://open.spotify.com",
+  };
+
+  const PLATFORMS = [
+    { name: "Spotify", url: PODCAST.spotifyUrl, color: "#1DB954" },
+    { name: "Apple Podcasts", url: PODCAST.appleUrl, color: "#FC3C44" },
+    { name: "YouTube", url: PODCAST.youtubeUrl, color: "#FF0000" },
+  ];
+
   return (
     <>
       {/* Hero */}

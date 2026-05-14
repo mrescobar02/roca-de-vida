@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/common/SectionHeading";
 import { ScriptureQuote } from "@/components/common/ScriptureQuote";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { TilopayForm } from "./TilopayForm";
+import { getDonationSettings } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Donaciones | Roca de Vida Panamá",
@@ -19,14 +20,36 @@ const IMPACT_STATS = [
   { value: "15+",  label: "sermones al mes" },
 ];
 
-const BANK_DETAILS = [
-  { label: "Banco",    value: "Banco Nacional de Panamá" },
-  { label: "Cuenta",  value: "123-456-789-0" },
-  { label: "Titular", value: "Iglesia Roca de Vida Panamá" },
-  { label: "RUC",     value: "XXX-XXX-XXXXX" },
-];
+interface DonationSettingsData {
+  yappy?: {
+    handle?: string;
+    accountHolder?: string;
+    qrCode?: { url: string; alt?: string };
+  };
+  bankTransfer?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountHolder?: string;
+    ruc?: string;
+    email?: string;
+  };
+}
 
-export default function DonacionesPage() {
+export const revalidate = 300;
+
+export default async function DonacionesPage() {
+  const settings = await getDonationSettings().catch(() => null) as DonationSettingsData | null;
+
+  const yappy = settings?.yappy;
+  const bank = settings?.bankTransfer;
+
+  const bankDetails = [
+    { label: "Banco",    value: bank?.bankName      ?? "Banco Nacional de Panamá" },
+    { label: "Cuenta",  value: bank?.accountNumber  ?? "—" },
+    { label: "Titular", value: bank?.accountHolder  ?? "Iglesia Roca de Vida Panamá" },
+    { label: "RUC",     value: bank?.ruc            ?? "—" },
+  ];
+
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────── */}
@@ -145,10 +168,19 @@ export default function DonacionesPage() {
                     {/* QR */}
                     <div className="shrink-0">
                       <div className="w-28 h-28 rounded-xl border border-border bg-white flex items-center justify-center overflow-hidden">
-                        {/* Reemplazar con: <Image src="/images/yappy-qr.png" alt="QR Yappy Roca de Vida" width={112} height={112} /> */}
-                        <div className="flex flex-col items-center gap-1 p-2 text-center">
-                          <span className="text-[0.5rem] text-neutral-400 leading-tight">QR próximamente</span>
-                        </div>
+                        {yappy?.qrCode?.url ? (
+                          <Image
+                            src={yappy.qrCode.url}
+                            alt={yappy.qrCode.alt ?? "QR Yappy Roca de Vida"}
+                            width={112}
+                            height={112}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 p-2 text-center">
+                            <span className="text-[0.5rem] text-neutral-400 leading-tight">QR próximamente</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -157,13 +189,13 @@ export default function DonacionesPage() {
                       <div className="flex flex-col gap-0.5">
                         <span className="text-label text-text-muted text-[0.625rem]">Usuario Yappy</span>
                         <span className="font-display font-700 text-gold text-[1.125rem] tracking-tight">
-                          @rocadevidapanama
+                          {yappy?.handle ?? "@rocadevidapanama"}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-label text-text-muted text-[0.625rem]">Titular</span>
                         <span className="font-body text-[0.9375rem] text-text-primary font-medium">
-                          Iglesia Roca de Vida Panamá
+                          {yappy?.accountHolder ?? "Iglesia Roca de Vida Panamá"}
                         </span>
                       </div>
                       <p className="font-body text-[0.8125rem] text-text-muted leading-snug">
@@ -187,7 +219,7 @@ export default function DonacionesPage() {
                   </div>
 
                   <dl className="flex flex-col gap-3">
-                    {BANK_DETAILS.map(({ label, value }) => (
+                    {bankDetails.map(({ label, value }) => (
                       <div key={label} className="flex flex-col gap-0.5">
                         <dt className="text-label text-text-muted text-[0.625rem]">{label}</dt>
                         <dd className="font-body text-[0.9375rem] text-text-primary font-medium">{value}</dd>
@@ -195,15 +227,17 @@ export default function DonacionesPage() {
                     ))}
                   </dl>
 
-                  <p className="font-body text-[0.8125rem] text-text-muted leading-snug mt-auto pt-2 border-t border-border">
-                    Envía el comprobante a{" "}
-                    <a
-                      href="mailto:donaciones@rocadevidapanama.com"
-                      className="text-gold hover:underline"
-                    >
-                      donaciones@rocadevidapanama.com
-                    </a>
-                  </p>
+                  {(bank?.email) && (
+                    <p className="font-body text-[0.8125rem] text-text-muted leading-snug mt-auto pt-2 border-t border-border">
+                      Envía el comprobante a{" "}
+                      <a
+                        href={`mailto:${bank.email}`}
+                        className="text-gold hover:underline"
+                      >
+                        {bank.email}
+                      </a>
+                    </p>
+                  )}
                 </div>
               </AnimateInItem>
             </StaggerContainer>

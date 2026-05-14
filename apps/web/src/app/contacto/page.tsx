@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/common/SectionHeading";
 import { AnimateIn, StaggerContainer, AnimateInItem } from "@/components/common/AnimateIn";
 import { ContactForm } from "@/components/sections/ContactForm";
 import { cn } from "@rdv/utils";
+import { getSiteSettings } from "@/lib/payload/client";
 
 export const metadata: Metadata = {
   title: "Contáctanos | Roca de Vida Panamá",
@@ -26,33 +27,6 @@ const PASTORS = [
   { name: "Carlos Pelaez",      role: "Pastor",              initials: "CP" },
 ];
 
-const CHANNELS = [
-  {
-    icon: MessageCircle,
-    label: "WhatsApp",
-    description: "Escríbenos directamente para preguntas rápidas o peticiones de oración.",
-    href: "https://wa.me/50700000000", // TODO: replace with church WhatsApp number
-    cta: "Abrir chat",
-    external: true,
-  },
-  {
-    icon: Instagram,
-    label: "Instagram",
-    description: "Síguenos para noticias, devocionales y actualizaciones de la iglesia.",
-    href: "https://instagram.com/rocadevidapanama",
-    cta: "@rocadevidapanama",
-    external: true,
-  },
-  {
-    icon: Youtube,
-    label: "YouTube",
-    description: "Mira nuestros servicios en vivo y el archivo completo de sermones.",
-    href: "https://youtube.com/@rocadevidapanama",
-    cta: "@rocadevidapanama",
-    external: true,
-  },
-];
-
 // ─── Map embed ────────────────────────────────────────────────────────────────
 // To get the exact embed URL: open https://share.google/WR9k6jyDUSTP5TRug,
 // then use Google Maps → Share → Embed a map → copy the iframe src.
@@ -62,7 +36,41 @@ const MAPS_SHARE_URL = "https://share.google/WR9k6jyDUSTP5TRug";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ContactPage() {
+export const revalidate = 300;
+
+export default async function ContactPage() {
+  const settings = await getSiteSettings().catch(() => null) as {
+    contact?: { whatsappUrl?: string };
+  } | null;
+  const whatsappUrl = settings?.contact?.whatsappUrl ?? "https://wa.me/50700000000";
+
+  const CHANNELS = [
+    {
+      icon: MessageCircle,
+      label: "WhatsApp",
+      description: "Escríbenos directamente para preguntas rápidas o peticiones de oración.",
+      href: whatsappUrl,
+      cta: "Abrir chat",
+      external: true,
+    },
+    {
+      icon: Instagram,
+      label: "Instagram",
+      description: "Síguenos para noticias, devocionales y actualizaciones de la iglesia.",
+      href: "https://instagram.com/rocadevidapanama",
+      cta: "@rocadevidapanama",
+      external: true,
+    },
+    {
+      icon: Youtube,
+      label: "YouTube",
+      description: "Mira nuestros servicios en vivo y el archivo completo de sermones.",
+      href: "https://youtube.com/@rocadevidapanama",
+      cta: "@rocadevidapanama",
+      external: true,
+    },
+  ];
+
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────── */}
